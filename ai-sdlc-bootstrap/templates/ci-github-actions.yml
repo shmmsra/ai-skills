@@ -1,0 +1,54 @@
+# {{PROJECT_NAME}} CI — mirrors `make check` exactly.
+#
+# Whatever the local pre-commit gate runs, CI runs the same thing on Linux.
+# Drift between local and CI erodes the gate's authority — don't let them diverge.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Pre-commit gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Language-specific setup ──────────────────────────────────────────────
+      # Replace this block with the right setup actions for the detected languages.
+      # Examples:
+      #
+      # TypeScript / Node:
+      #   - uses: actions/setup-node@v4
+      #     with:
+      #       node-version: '20'
+      #       cache: 'npm'
+      #   - run: npm ci
+      #
+      # Python:
+      #   - uses: actions/setup-python@v5
+      #     with:
+      #       python-version: '3.12'
+      #       cache: 'pip'
+      #   - run: pip install -e '.[dev]'
+      #
+      # Go:
+      #   - uses: actions/setup-go@v5
+      #     with:
+      #       go-version: '1.22'
+      #
+      # Rust:
+      #   - uses: dtolnay/rust-toolchain@stable
+      #
+      # C++:
+      #   - run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+      #
+{{CI_SETUP_BLOCK}}
+
+      # ── The actual gate ──────────────────────────────────────────────────────
+      - name: Run make check
+        run: make check
