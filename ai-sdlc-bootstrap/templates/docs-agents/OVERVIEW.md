@@ -55,14 +55,10 @@ Full ADRs in [`docs/decisions/`](../decisions/). Read the ADR before changing an
 
 ```bash
 {{CHECK_COMMAND}}   # pre-commit gate — run before every commit
-make setup-hooks    # one-time: installs pre-commit hook
+make setup-hooks    # one-time: installs pre-commit + post-commit hooks
 ```
 
-**First-time setup**:
-1. Clone the repo.
-2. Install dependencies (project-specific — document the command here).
-3. Run `make setup-hooks` to install the pre-commit gate.
-4. Run `{{CHECK_COMMAND}}` to verify the baseline.
+**First-time setup**: see [`docs/dev-setup.md`](../dev-setup.md) for the full bootstrap (dependencies, tools, MCP servers, skills, language toolchains, environment variables). The dev-setup doc is the single source of truth for onboarding — if it's out of date, fix it in the same commit as whatever broke it.
 
 Credentials (if any): see `.env.example` for the required variables. **Never** commit `.env`.
 
@@ -72,18 +68,35 @@ Credentials (if any): see `.env.example` for the required variables. **Never** c
 
 ```
 .
+├── README.md               # Project description + dev-setup pointer
+├── LICENSE                 # {{LICENSE_SPDX}}
+├── CODEOWNERS              # Default ownership
+├── .gitignore              # Language-aware ignores
 ├── docs/                   # All project documentation
 │   ├── agents/             # AGENT-CRITICAL: OVERVIEW.md, CONVENTIONS.md, STATUS.md
 │   ├── decisions/          # ADRs
 │   ├── CHANGELOG.md
 │   ├── requirements.md
 │   ├── issues.md
-│   └── manual-testing.md
+│   ├── manual-testing.md
+│   ├── dev-setup.md        # Onboarding: deps, tools, MCP, skills, hooks
+│   └── commit-log.md       # Append-only audit log: agent vs manual commits
+├── scripts/
+│   ├── setup-hooks.sh      # Installs pre-commit + post-commit
+│   └── agent-commit.sh     # Wrapper that adds the agent Co-Authored-By trailer
 ├── CLAUDE.md / AGENTS.md / GEMINI.md / .cursor/rules/   # Agent entry points
-├── CONTRIBUTING.md         # Workflow + non-negotiable rules
+├── CONTRIBUTING.md         # Workflow + merge policy + commit tracking + hygiene
 ├── Makefile                # `make check`, `make setup-hooks`
 ├── .github/workflows/ci.yml
 └── src/ (or equivalent)
 ```
 
 *Update this tree as the project grows. Agents read it to navigate.*
+
+---
+
+## Further reading
+
+External docs / wikis that were used to inform this scaffold (read these for deeper context):
+
+{{EXTERNAL_DOCS_LIST}}

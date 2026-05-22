@@ -143,7 +143,11 @@ This is not optional cleanup. The next agent to pick up this repo reads these fi
 
 **Keep history linear.** This repo uses a strict linear history — no merge commits.
 
-### When merging a feature branch
+### Code-review and merge policy
+
+{{MERGE_POLICY_BLOCK}}
+
+### When merging a feature branch (direct-merge mode)
 
 Use **rebase or cherry-pick**, never `git merge --no-ff`. If `git merge --ff-only` fails, the branch needs to be rebased first.
 
@@ -153,6 +157,8 @@ Use **rebase or cherry-pick**, never `git merge --no-ff`. If `git merge --ff-onl
 
 This rule holds even when the human says "merge it" or "land it" (means commit + merge locally, not push). If the human explicitly types `git push` or says "push to remote", run it. Otherwise, stop after the local merge and report the final commit SHA.
 
+**Before any push or merge to `main`**, the agent must verify that every commit in the range has been agent-reviewed (see §10).
+
 ---
 
 ## 7. Commit message format
@@ -161,6 +167,8 @@ This rule holds even when the human says "merge it" or "land it" (means commit +
 <type>(<scope>): <short imperative summary>
 
 <body — what changed and why, not a diff summary>
+
+{{COAUTHOR_LINE}}
 ```
 
 **Types**: `feat`, `fix`, `test`, `docs`, `refactor`, `ci`, `chore`, `perf`
@@ -199,3 +207,83 @@ If you are uncertain whether an operation requires approval, ask. The cost of as
 ```
 
 See `docs/agents/OVERVIEW.md` for per-subpackage commands if the project has multiple build targets.
+
+---
+
+## 10. Commit attribution and the manual-vs-agent commit log
+
+This repo tracks **who authored each commit**: a human directly, or an AI agent. The mechanism is `{{MANUAL_COMMIT_REVIEW}}`. Two artefacts implement it:
+
+- **`scripts/agent-commit.sh`** — the wrapper that AI agents use instead of `git commit`. It appends the agent's `Co-Authored-By` trailer and tags the commit subject internally.
+- **`docs/commit-log.md`** — append-only audit log written by the post-commit hook. Each row: short SHA, author kind (`agent` / `manual`), subject line.
+
+### Author kinds
+
+| Kind | How a commit is classified |
+|------|----------------------------|
+| `agent` | Commit message contains the configured Co-Authored-By trailer (`{{COAUTHOR_LINE}}`) |
+| `manual` | Commit message does **not** contain the agent trailer |
+
+### What the agent must do before any push/merge
+
+Before running any externally visible operation (`git push`, opening a PR, merging into `main`):
+
+1. **Scan `docs/commit-log.md`** for any `manual` row in the range you're about to push/merge.
+2. For each manual commit: read the diff (`git show <sha>`), verify it does not violate any rule in `docs/agents/CONVENTIONS.md`, doesn't introduce uncovered behaviour, and doesn't break the architecture boundaries.
+3. **If review is clean**: proceed.
+4. **If review surfaces concerns**: stop, raise the concerns to the human, and wait for an explicit instruction. Do not push/merge a manual commit you cannot vouch for.
+
+The post-commit hook also flags any commit that lacks both a trailer *and* a recognised manual marker — those need human acknowledgement before the next commit can land.
+
+### When this rule is relaxed
+
+If `{{MANUAL_COMMIT_REVIEW}}` was set to `convention-only` at scaffold time, the hook is not installed and there is no `docs/commit-log.md`. The trailer convention still applies for commit attribution, but the gating is informational only.
+
+---
+
+## 11. Commit co-authorship
+
+This project's policy: `{{COAUTHOR_AGENT}}`.
+
+When **yes**, every agent-authored commit ends with:
+
+```
+{{COAUTHOR_LINE}}
+```
+
+Agents commit via `scripts/agent-commit.sh "<message>"` which adds this trailer automatically. Manual `git commit` invocations by a human do **not** add the trailer — that's how §10 distinguishes the two kinds.
+
+When **no**, no trailer is added. Author kind is then inferred from a `[manual]` / `[agent]` tag on the subject line, set by `scripts/agent-commit.sh` for agents only.
+
+---
+
+## 12. Repository hygiene files — keep them updated
+
+The following files are part of the project's contract with both humans and agents. **Treat them as code**: when a change makes them stale, update them in the same commit.
+
+| File | When to update |
+|------|----------------|
+| `README.md` | Project description / install / quick-start changes. Always link to `docs/dev-setup.md` for full setup. |
+| `LICENSE` | Only if changing license. Document the change in an ADR. |
+| `CODEOWNERS` | When ownership of a directory or module changes. |
+| `.gitignore` | When adding a new build artefact / cache dir / IDE config that should not be committed. Append, never wholesale-rewrite. |
+| `.vscode/`, `.zed/`, etc. | When adding a recommended extension, snippet, or workspace setting that benefits all contributors. |
+| `docs/dev-setup.md` | When adding a new dependency, MCP server, skill, language toolchain, or required tool. The reproducibility of onboarding depends on this. |
+| `docs/decisions/` | When making an architectural decision another agent might wonder about. See ADR template. |
+
+Stale hygiene files are a documented failure mode of multi-agent SDLCs. Don't let them rot.
+
+---
+
+## 13. Dev environment setup
+
+New contributors (human or agent) bootstrap their environment by following **[`docs/dev-setup.md`](docs/dev-setup.md)**. That document is the single source of truth for:
+
+- Required language toolchains and versions
+- Project dependencies (and how to install them)
+- Required external tools / CLIs
+- MCP servers / agent skills the project depends on
+- The `make setup-hooks` step (installs pre-commit + post-commit)
+- The first-time `{{CHECK_COMMAND}}` baseline run
+
+If you add a new dependency or tool while working in this repo, update `docs/dev-setup.md` in the same commit. Onboarding the next agent on a fresh clone is the regression test for this file.

@@ -1,0 +1,46 @@
+# {{PROJECT_NAME}} — .gitignore
+#
+# The scaffold writes this as a base + language-specific blocks for whatever was
+# detected (see reference/language-presets.md in the ai-sdlc-bootstrap skill).
+# Append project-specific entries below the marker line — never overwrite this
+# file wholesale; add new entries only.
+
+# ── OS / editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+.zed/
+.cursor/cache/
+
+# ── Logs / runtime ───────────────────────────────────────────────────────────
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ── Env / secrets — NEVER commit ─────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+
+# ── Agent / SDLC artifacts ───────────────────────────────────────────────────
+# .claude/memory/ is committed by default for solo / small-team repos.
+# For larger teams where preferences diverge per person, uncomment:
+# .claude/memory/
+
+# ── Language-specific blocks ─────────────────────────────────────────────────
+# (The scaffold inserts the right blocks here based on detected languages.
+#  See reference/language-presets.md.)
+
+{{LANGUAGE_GITIGNORE_BLOCK}}
+
+# ── Project-specific (add new entries below this line) ───────────────────────

@@ -57,3 +57,43 @@ The following operations **always** require explicit human approval before execu
 {{APPROVAL_GATES_BLOCK}}
 
 If you are uncertain whether an operation falls under one of these categories, ask. The cost of asking is low; the cost of an unwanted change in any of these areas is high.
+
+---
+
+## 5. Code-review and merge policy
+
+This project's policy: **`{{MERGE_POLICY}}`**.
+
+{{MERGE_POLICY_BLOCK}}
+
+Full detail in `CONTRIBUTING.md §6`.
+
+---
+
+## 6. Commit attribution and tracking
+
+This repo tracks **author kind** for every commit (`agent` vs `manual`). The mechanism: `{{MANUAL_COMMIT_REVIEW}}`.
+
+- Agents commit via `scripts/agent-commit.sh` — adds the trailer `{{COAUTHOR_LINE}}`, post-commit hook logs `agent` in `docs/commit-log.md`.
+- Humans commit with plain `git commit` — no trailer, logged as `manual`.
+- Before any push / merge to `main`, the agent must audit every `manual` commit in the range against this file. See `CONTRIBUTING.md §10`.
+
+Violating this audit step is treated as a Rule 0 violation — same severity as skipping the plan step.
+
+---
+
+## 7. Repository hygiene files
+
+These files are project artefacts, not metadata. **Keep them current.** Updating them is part of "done" for any change that affects them.
+
+| File | What changes it |
+|------|-----------------|
+| `README.md` | New install/quick-start step, public-facing description change |
+| `LICENSE` | Change in license (requires ADR) |
+| `CODEOWNERS` | Module / directory ownership change |
+| `.gitignore` | New build artefact, cache dir, IDE config, or secret pattern |
+| `.vscode/`, `.zed/`, IDE configs | New recommended extension or workspace setting |
+| `docs/dev-setup.md` | **New dependency, MCP, skill, language toolchain, or required tool** — onboarding will break otherwise |
+| `docs/decisions/` | Architectural choice another agent might wonder about |
+
+See `CONTRIBUTING.md §12` for the full policy.

@@ -36,6 +36,29 @@ Posting the diff before the manual test is confirmed is a violation, even when `
 
 Every commit must leave CI green. The pre-commit hook (`make setup-hooks` after cloning) enforces this locally.
 
+### Commit via `scripts/agent-commit.sh` — never plain `git commit`
+
+When you commit, use `scripts/agent-commit.sh "<message>"`. It:
+
+1. Adds the agent Co-Authored-By trailer (`{{COAUTHOR_LINE}}`) so this commit is recognised as agent-authored.
+2. Lets the post-commit hook record the right author kind in `docs/commit-log.md`.
+
+Running plain `git commit` strips you of agent attribution — the commit will be logged as `manual` and require human re-review before it can be pushed/merged.
+
+### Before pushing or merging — review every `manual` commit in range
+
+This repo gates push/merge on §10 of CONTRIBUTING.md. Before doing either:
+
+1. Open `docs/commit-log.md`.
+2. For every row tagged `manual` in the push/merge range, run `git show <sha>` and audit it against `docs/agents/CONVENTIONS.md`.
+3. Surface any concern to the human. **Never push/merge a manual commit you cannot vouch for.**
+
+### Merge policy
+
+This project enforces `{{MERGE_POLICY}}`. See `CONTRIBUTING.md §6` for the exact contract. Summary:
+
+{{MERGE_POLICY_BLOCK}}
+
 ---
 
 ## 1. Hard constraints (every agent must respect these)
@@ -47,6 +70,7 @@ Every commit must leave CI green. The pre-commit hook (`make setup-hooks` after 
 - **No credentials in code**: API keys go in `.env` only (git-ignored).
 - **All decisions get an ADR**: If you're about to change something another agent might wonder about, write an ADR. Template in `docs/decisions/README.md`.
 - **Ask before approval-gated operations**: {{APPROVAL_GATES_LIST}}
+- **Repo hygiene files stay current**: `README.md`, `LICENSE`, `CODEOWNERS`, `.gitignore`, `docs/dev-setup.md`, IDE configs — update them in the same commit when they go stale. See `CONTRIBUTING.md §12`.
 
 ---
 
@@ -60,6 +84,8 @@ Every agent session that makes significant changes **must** update before commit
 4. **`docs/issues.md`** — Mark completed issues `DONE`, update `IN PROGRESS`, add newly discovered issues. (For GitHub/JIRA backends, update the external ticket and reference its ID in the commit.)
 5. **`docs/decisions/`** — If a significant architectural decision was made, create an ADR (template in `docs/decisions/README.md`).
 6. **`docs/manual-testing.md`** — Add manual-test steps for every new feature, CLI flag, UI element, or API route.
+7. **`docs/dev-setup.md`** — If you added a dependency, CLI tool, MCP server, skill, or language toolchain, update the install instructions. The reproducibility of onboarding depends on this file.
+8. **Repo hygiene** — If a hygiene file went stale (README quick-start, CODEOWNERS, `.gitignore`, IDE recommended extensions), update it. See `CONTRIBUTING.md §12`.
 
 > **Rule**: Stale docs break every subsequent session. Treat doc updates as part of the definition of done.
 >

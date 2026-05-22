@@ -20,7 +20,10 @@
 - **Plan before you code**: For any non-trivial change, write out every file you will create/modify and why, state what you will NOT do, and wait for explicit human approval before writing any implementation code. Silence is not approval.
 - **`{{CHECK_COMMAND}}` must pass** before every commit.
 - **TDD is mandatory**: write tests before or alongside logic changes, in the same commit.
-- **Docs are part of done**: update `docs/agents/STATUS.md`, `docs/CHANGELOG.md`, `docs/issues.md`, and `docs/requirements.md` in the same commit.
+- **Docs are part of done**: update `docs/agents/STATUS.md`, `docs/CHANGELOG.md`, `docs/issues.md`, `docs/requirements.md`, and `docs/dev-setup.md` (if dependencies/tools changed) in the same commit.
+- **Commit via `scripts/agent-commit.sh`**: it adds the agent Co-Authored-By trailer (`{{COAUTHOR_LINE}}`) and lets the post-commit hook log the right author kind in `docs/commit-log.md`. Plain `git commit` will be logged as `manual`.
+- **Merge policy**: `{{MERGE_POLICY}}`. See `CONTRIBUTING.md §6`.
+- **Before push/merge**: review every `manual` commit in the range — see `CONTRIBUTING.md §10`.
 
 ---
 
@@ -33,7 +36,9 @@ Key checklist before committing:
 - [ ] Tests written (TDD)
 - [ ] `{{CHECK_COMMAND}}` passes
 - [ ] Manual test completed (if runtime behaviour changed — see `CONTRIBUTING.md §3`)
-- [ ] Docs updated (`docs/agents/STATUS.md`, `CHANGELOG.md`, `issues.md`, `requirements.md`)
+- [ ] Docs updated (`docs/agents/STATUS.md`, `CHANGELOG.md`, `issues.md`, `requirements.md`, `dev-setup.md` if deps changed)
+- [ ] Repo hygiene files updated where applicable (README, `.gitignore`, CODEOWNERS — see `CONTRIBUTING.md §12`)
+- [ ] Commit via `scripts/agent-commit.sh` so the author trailer is set
 
 ---
 

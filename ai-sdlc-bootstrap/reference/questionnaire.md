@@ -4,9 +4,13 @@ Goal: gather enough information to fill every `{{TOKEN}}` in the templates witho
 
 ## Tool
 
-Use `AskUserQuestion` — it allows up to 4 questions per call and supports single-select / multi-select. Send up to two rounds (≤ 8 questions total). Don't make this an interrogation.
+Use `AskUserQuestion` — it allows up to 4 questions per call and supports single-select / multi-select. Send up to four rounds (≤ 16 questions total, but ideally fewer — skip rounds when the answers can be inferred from assessment).
 
-## Round 1 (always asked)
+Don't make this an interrogation. If the project is **mature** and most defaults are obvious, collapse Rounds 1–4 into the fewest necessary single-select prompts.
+
+---
+
+## Round 1 (always asked) — identity, agents, tickets, build
 
 **Question 1: Project identity**
 - *"What's the project called, and what's a short one-line description?"*
@@ -29,7 +33,9 @@ Use `AskUserQuestion` — it allows up to 4 questions per call and supports sing
 - `Just (justfile)` — modern alternative
 - Derive `{{CHECK_COMMAND}}` accordingly.
 
-## Round 2 (asked after Round 1 answers known)
+---
+
+## Round 2 — tests, plan threshold, approval gates
 
 **Question 5: Test framework** (autodetect, confirm)
 - Pre-fill the answer with what assessment found. Options:
@@ -67,43 +73,128 @@ Use `AskUserQuestion` — it allows up to 4 questions per call and supports sing
 - Plus free-text "Other".
 - Each selection becomes an `{{APPROVAL_GATE_N}}` line in `docs/agents/CONVENTIONS.md`.
 
-## Round 3 (optional — only if user said "yes, ask more" or if domain rules emerged from the README)
+---
 
-**Question 9: Domain hard constraints**
+## Round 3 — collaboration policy (commits, reviews, merges)
+
+These four questions encode the team's *human–agent collaboration contract*. They drive `CONTRIBUTING.md` §6/§10/§11 and the agent-config notes.
+
+**Question 9: Co-authorship in commit messages** (single-select, default yes)
+- *"Should AI agents add a `Co-Authored-By:` trailer to commit messages when they author the change? (Lets you see at a glance which commits an agent worked on.)"*
+- Options:
+  - `Yes — add Co-Authored-By trailer for every agent-authored commit` (Recommended)
+  - `No — keep commit messages clean of agent attribution`
+- If yes, also ask for the trailer name + email to use. Defaults: `{agent} <noreply@anthropic.com>` for Claude, `<noreply@openai.com>` for Codex, `<noreply@google.com>` for Gemini, or a generic `AI Agent <noreply@example.com>`.
+- Sets `{{COAUTHOR_AGENT}}`, `{{COAUTHOR_NAME}}`, `{{COAUTHOR_EMAIL}}`, `{{COAUTHOR_LINE}}`.
+
+**Question 10: Manual-commit review policy** (single-select, default trailer-log)
+- *"How should manual (non-agent) commits be tracked and scrutinised?"*
+- Options:
+  - `Trailer + log + agent-reviews-before-push` (Recommended) — every commit gets a trailer indicating its author kind; a post-commit hook appends to `docs/commit-log.md`. Before any `git push` / merge, the agent must review any commit tagged `[manual]`.
+  - `Pre-commit blocks unreviewed manual commits` — stricter. The pre-commit hook refuses a manual commit unless it carries a `Manual-Review: <reason>` trailer or an `AGENT_REVIEWED=1` env var. Human can override but must do so explicitly.
+  - `Convention only` — document the trailer convention but don't install any hook. Cheapest, easiest to ignore.
+- Sets `{{MANUAL_COMMIT_REVIEW}}`.
+
+**Question 11: Merge policy** (single-select)
+- *"How does code reach `main`?"*
+- Options:
+  - `Direct merge after local review` — agent + human review locally, fast-forward / rebase into `main` directly. Suitable for solo devs and small trusted teams.
+  - `PR required via branch` — every change goes via a feature branch and PR. Suitable for teams and any project with external contributors or required GitHub reviews.
+- No default — make the user pick. Sets `{{MERGE_POLICY}}` and drives `{{MERGE_POLICY_BLOCK}}` in CONTRIBUTING + agent configs.
+
+**Question 12: Manual testing requirement** (single-select, default yes)
+- *"For runtime-affecting changes, does the agent need to write a manual test plan and wait for you to run it before committing? (Recommended: yes.)"*
+- Options:
+  - `Yes — manual test plan required for runtime-affecting changes` (Recommended)
+  - `No — recommended but not gated`
+- Sets `{{MANUAL_TEST_REQUIRED}}` and `{{MANUAL_TEST_REQUIRED_TEXT}}` / `{{MANUAL_TEST_REQUIRED_TEXT_LONG}}`.
+
+---
+
+## Round 4 — repository hygiene & dev environment
+
+Skip any question whose file already exists in the repo (assessment recorded this). Only ask about the *missing* hygiene files.
+
+**Question 13: Hygiene files to scaffold** (multi-select, pre-checked for what's missing)
+- *"Which of these hygiene files should I scaffold? (Pre-checked items are missing from your repo.)"*
+- Options (each only checked if missing):
+  - `README.md` — project description + dev-setup pointer + AI-SDLC section
+  - `LICENSE` — pick SPDX in the next question if checked
+  - `CODEOWNERS` — starter file with the project owner as the default
+  - `.gitignore` — language-aware (TypeScript/Python/Go/Rust/C++/Java blocks based on detection)
+  - `.editorconfig` — minimal editor config (only useful if mixing IDEs)
+  - `docs/dev-setup.md` — dependency / tools / MCP / skills installation guide
+  - `docs/commit-log.md` — append-only audit log of manual vs agent commits (always recommended if `{{MANUAL_COMMIT_REVIEW}}` is `trailer-log` or `pre-commit-block`)
+- Each selection appends to `{{SCAFFOLD_HYGIENE_FILES}}`.
+
+**Question 14: License choice** (single-select; only ask if `LICENSE` was checked in Q13)
+- *"Which license?"*
+- Options:
+  - `MIT` (Recommended for permissive open source)
+  - `Apache-2.0` (Recommended for open source where patent grant matters)
+  - `Proprietary — All rights reserved` (Recommended for internal / closed-source)
+  - `None — leave it out for now`
+- If MIT or Apache-2.0: also ask for the copyright holder name (default: `git config user.name`).
+- Sets `{{LICENSE_SPDX}}`, `{{LICENSE_HOLDER}}`, `{{LICENSE_YEAR}}` (= `date +%Y`).
+
+**Question 15: IDE targets** (multi-select; only ask if any IDE config is missing)
+- *"Which IDE / editor configs should I scaffold? (Each adds workspace settings + recommended extensions.)"*
+- Options (pre-checked based on agent targets and detected configs):
+  - `VS Code` — `.vscode/settings.json` + `.vscode/extensions.json`
+  - `Cursor` — `.cursor/rules/{{PROJECT_SLUG}}.mdc` (already covered if Cursor is in `{{AGENT_TARGETS}}`)
+  - `JetBrains` — `.gitignore` entries only; we don't write proprietary IDE configs
+  - `Zed` — `.zed/settings.json`
+- Sets `{{IDE_TARGETS}}`.
+
+---
+
+## Round 5 (optional) — domain rules
+
+**Question 16: Domain hard constraints** (free-text, 0–3)
 - *"Are there any architectural or domain rules that must never be violated? Examples: 'no network calls from the rendering engine', 'no PII in logs', 'all SQL goes through the ORM'. Up to three."*
 - Free-text, 0–3 entries. Each becomes a `{{DOMAIN_RULE_N}}` in `docs/agents/CONVENTIONS.md`.
 
-**Question 10: Manual testing requirement**
-- *"For runtime-affecting changes, does the agent need to write a manual test plan and wait for you to run it before committing? (Recommended: yes.)"*
-- Yes / No. If no, the `Manual testing before commit` section in `CONTRIBUTING.md` is reduced to a recommendation rather than a gate.
+If you collected enough hints during the Discover phase to draft these yourself, propose them back to the user instead of asking blind.
+
+---
 
 ## Tokens populated by interview
 
-After Round 2 (and 3 if asked), you should have values for:
+After all rounds, you should have values for:
 
-- `{{PROJECT_NAME}}`
-- `{{PROJECT_SLUG}}`
-- `{{PROJECT_DESCRIPTION}}`
-- `{{TICKET_PREFIX}}`
-- `{{TICKET_SOURCE}}` — one of `inrepo` / `github` / `jira`
-- `{{GITHUB_OWNER_REPO}}` — only if `{{TICKET_SOURCE}} == github`
-- `{{JIRA_PROJECT_KEY}}` and `{{JIRA_BASE_URL}}` — only if `{{TICKET_SOURCE}} == jira`
-- `{{AGENT_TARGETS}}` — comma list, e.g. `claude,codex,cursor,gemini`
-- `{{BUILD_ENTRY_POINT}}` — `make` / `npm` / `just` / etc.
-- `{{LANGUAGE}}` — primary, e.g. `typescript`
-- `{{LANGUAGES_LIST}}` — comma list
-- `{{TEST_FRAMEWORK}}` — e.g. `vitest`
-- `{{TEST_COMMAND}}` — exact command, e.g. `npm test`
-- `{{TYPECHECK_COMMAND}}` — exact command, e.g. `npm run typecheck` (empty for dynamically-typed langs that don't use one)
-- `{{CHECK_COMMAND}}` — the body of `make check`, derived from the above
-- `{{STARTER_TEST}}` — `yes` / `no`
-- `{{NONTRIVIAL_DEFINITION}}` — one of three preset blocks
-- `{{APPROVAL_GATES}}` — list of selected gates
-- `{{DOMAIN_RULES}}` — list of free-text rules
-- `{{MANUAL_TEST_REQUIRED}}` — `yes` / `no`
-- `{{TODAY}}` — `YYYY-MM-DD` of the scaffold run
+**Identity / build**
+- `{{PROJECT_NAME}}`, `{{PROJECT_SLUG}}`, `{{PROJECT_DESCRIPTION}}`, `{{PROJECT_OWNER}}`, `{{TODAY}}`
+- `{{TICKET_PREFIX}}`, `{{TICKET_PREFIX_LOWER}}`, `{{TICKET_SOURCE}}`, `{{TICKET_SOURCE_DESCRIPTION}}`, `{{GITHUB_OWNER_REPO}}` *or* `{{JIRA_PROJECT_KEY}}` + `{{JIRA_BASE_URL}}`
+- `{{AGENT_TARGETS}}`, `{{AGENT_CONFIG_FILES_LIST}}`
+- `{{BUILD_ENTRY_POINT}}`, `{{LANGUAGE}}`, `{{LANGUAGES_LIST}}`
+- `{{TEST_FRAMEWORK}}`, `{{TEST_COMMAND}}`, `{{TEST_DIRECTORY}}`, `{{TYPECHECK_COMMAND}}`, `{{CHECK_COMMAND}}`
 
-If any token is missing after Round 2, ask in Round 3 — don't guess and don't leave `{{TOKENS}}` in the written files.
+**Workflow**
+- `{{STARTER_TEST}}` — `yes`/`no`
+- `{{NONTRIVIAL_DEFINITION}}` + `{{NONTRIVIAL_DEFINITION_BLOCK}}`
+- `{{APPROVAL_GATES}}` + `{{APPROVAL_GATES_LIST}}` + `{{APPROVAL_GATES_BLOCK}}`
+- `{{DOMAIN_RULES}}` + `{{DOMAIN_RULES_BLOCK}}`
+- `{{MANUAL_TEST_REQUIRED}}` + `{{MANUAL_TEST_REQUIRED_TEXT}}` + `{{MANUAL_TEST_REQUIRED_TEXT_LONG}}`
+
+**Collaboration contract (Round 3 — new)**
+- `{{COAUTHOR_AGENT}}` — `yes`/`no`
+- `{{COAUTHOR_NAME}}`, `{{COAUTHOR_EMAIL}}`, `{{COAUTHOR_LINE}}` — only meaningful if `COAUTHOR_AGENT == yes`
+- `{{MANUAL_COMMIT_REVIEW}}` — `trailer-log` / `pre-commit-block` / `convention-only`
+- `{{MERGE_POLICY}}` — `direct` / `pr-required`
+- `{{MERGE_POLICY_BLOCK}}` — multi-line prose for CONTRIBUTING §6 derived from the choice
+
+**Hygiene (Round 4 — new)**
+- `{{SCAFFOLD_HYGIENE_FILES}}` — comma list of selected hygiene files
+- `{{LICENSE_SPDX}}` — `MIT` / `Apache-2.0` / `Proprietary` / `None`
+- `{{LICENSE_HOLDER}}`, `{{LICENSE_YEAR}}`
+- `{{IDE_TARGETS}}` — comma list
+
+**Discovery (Phase 1.5 — new)**
+- `{{EXTERNAL_DOCS_LIST}}` — bulleted list of URLs / file paths read during Discover; included in `OVERVIEW.md` "Further reading" section
+
+If any token is missing after the rounds, ask — don't guess and don't leave `{{TOKENS}}` in the written files.
+
+---
 
 ## Summarize and confirm
 

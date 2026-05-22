@@ -72,6 +72,15 @@ If a user says *"save that we use snake_case for Python files"* — that's a **p
 
 Memory is for **per-user preferences and validated working style**, not project rules.
 
+## Seeding memory from Discovery (Phase 1.5)
+
+When the user shares external docs/wikis during the Discover phase, mine them for two memory candidates:
+
+- **`user_role.md`** — if the docs reveal the user's role, team, or area of expertise (e.g. an internal team page lists them as "Staff Engineer, Payments"), draft a `user_role.md` memory and confirm with the user before saving.
+- **`reference_*.md`** — for any external system referenced (Confluence space, Notion page, JIRA project, Grafana dashboard, design tool), draft a reference memory pointing future agents to it.
+
+Never invent — only write memory entries whose facts the user explicitly confirmed or whose facts are quoted verbatim from the discovered docs. When in doubt, ask before writing.
+
 ## Cross-session continuity contract
 
 After every scaffolded project, the first thing Claude (or any agent) does on a fresh session is:

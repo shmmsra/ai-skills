@@ -202,6 +202,114 @@ check:
 
 The point of the gate is enforcement, not language elegance. A one-line check command is fine.
 
+## Per-language `.gitignore` blocks
+
+Use these when scaffolding `templates/gitignore.template`. Pick the block(s) matching the detected language(s). The template starts with the shared base block, then appends each language's block.
+
+**Shared base** (always include):
+```gitignore
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+.zed/
+.cursor/cache/
+
+# Logs / runtime
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Env / secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+```
+
+**TypeScript / Node**:
+```gitignore
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+*.tsbuildinfo
+.npm/
+.eslintcache
+.pnpm-store/
+```
+
+**Python**:
+```gitignore
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+```
+
+**Go**:
+```gitignore
+# Binaries / coverage
+*.test
+*.out
+/vendor/
+/bin/
+```
+
+**Rust**:
+```gitignore
+/target/
+**/*.rs.bk
+Cargo.lock  # keep for binaries; remove this line for libraries
+```
+
+**C++ / CMake**:
+```gitignore
+build/
+out/
+*.o
+*.obj
+*.exe
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+```
+
+**Java (Maven / Gradle)**:
+```gitignore
+target/
+.gradle/
+build/
+*.class
+*.jar
+!gradle-wrapper.jar
+.gradletasknamecache
+```
+
+When merging into an existing `.gitignore`, **append only the entries that aren't already present** — never duplicate lines or rewrite the file wholesale.
+
 ## CI workflow mapping
 
 Whatever `make check` does, the GitHub Actions workflow runs the same thing on Linux. Don't drift the two — CI failures that pass locally erode the gate's authority.

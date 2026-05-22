@@ -1,0 +1,47 @@
+{
+  "// — {{PROJECT_NAME}} workspace settings —": "Committed to the repo so every contributor gets the same defaults. Personal overrides go in your user settings.json, not here.",
+
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/target": true,
+    "**/dist": true,
+    "**/build": true
+  },
+
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/coverage": true,
+    "**/target": true,
+    "**/.venv": true,
+    "**/__pycache__": true
+  },
+
+  "// Per-language overrides — add as needed": "Pin tab sizes and formatters here when they diverge from defaults.",
+  "[python]": {
+    "editor.tabSize": 4
+  },
+  "[go]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  }
+}

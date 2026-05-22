@@ -69,9 +69,37 @@ Used only inside `templates/Makefile` and `templates/ci-github-actions.yml`. Fil
 
 | Token | Source | Example |
 |-------|--------|---------|
-| `{{DOMAIN_RULES_BLOCK}}` | Interview Q9 (free-text list) | Bulleted list of project-specific hard constraints |
+| `{{DOMAIN_RULES_BLOCK}}` | Interview Q16 (free-text list) | Bulleted list of project-specific hard constraints |
 | `{{APPROVAL_GATES_LIST}}` | Interview Q8 (comma-joined short form) | `production deploys, database migrations, payment code` |
 | `{{APPROVAL_GATES_BLOCK}}` | Derived from Q8 (bulleted with explanations) | Multi-line block with each gate + why |
+
+## Collaboration-contract tokens (Round 3)
+
+| Token | Source | Example |
+|-------|--------|---------|
+| `{{COAUTHOR_AGENT}}` | Interview Q9 | `yes` / `no` |
+| `{{COAUTHOR_NAME}}` | Interview Q9 (only if yes) | `Claude` |
+| `{{COAUTHOR_EMAIL}}` | Interview Q9 (only if yes) | `noreply@anthropic.com` |
+| `{{COAUTHOR_LINE}}` | Derived from Q9 | `Co-Authored-By: Claude <noreply@anthropic.com>` (empty string if `COAUTHOR_AGENT == no`) |
+| `{{MANUAL_COMMIT_REVIEW}}` | Interview Q10 | `trailer-log` / `pre-commit-block` / `convention-only` |
+| `{{MERGE_POLICY}}` | Interview Q11 | `direct` / `pr-required` |
+| `{{MERGE_POLICY_BLOCK}}` | Derived from Q11 (full prose for CONTRIBUTING §6) | Multi-line: branch naming, PR template hints, ff-only rules, etc. |
+
+## Hygiene-file tokens (Round 4)
+
+| Token | Source | Example |
+|-------|--------|---------|
+| `{{SCAFFOLD_HYGIENE_FILES}}` | Interview Q13 (comma list of selections) | `README.md, LICENSE, .gitignore, docs/dev-setup.md, docs/commit-log.md` |
+| `{{LICENSE_SPDX}}` | Interview Q14 | `MIT` / `Apache-2.0` / `Proprietary` / `None` |
+| `{{LICENSE_HOLDER}}` | Interview Q14 | `Jane Doe` (or `Acme Corp`) |
+| `{{LICENSE_YEAR}}` | Derived (`date +%Y`) | `2026` |
+| `{{IDE_TARGETS}}` | Interview Q15 (comma list) | `vscode, cursor` |
+
+## Discovery tokens (Phase 1.5)
+
+| Token | Source | Example |
+|-------|--------|---------|
+| `{{EXTERNAL_DOCS_LIST}}` | Discover phase | Bulleted markdown list of URLs/paths read for context, with one-line purpose each |
 
 ## Substitution algorithm
 

@@ -99,12 +99,47 @@ ls CLAUDE.md AGENTS.md GEMINI.md .cursor/ .codex/ .github/copilot-instructions.m
 
 # Existing CI
 ls .github/workflows/ .gitlab-ci.yml .circleci/ azure-pipelines.yml 2>/dev/null
+
+# Repository hygiene files (presence matters; the interview branches on what's missing)
+ls README.md README.rst README 2>/dev/null                             # README
+ls LICENSE LICENSE.md LICENSE.txt COPYING 2>/dev/null                  # License
+ls CODEOWNERS .github/CODEOWNERS docs/CODEOWNERS 2>/dev/null           # Ownership
+ls .gitignore 2>/dev/null                                              # gitignore
+ls .editorconfig 2>/dev/null                                           # editor config
+
+# IDE / editor configs (record which are already present; user picks which to scaffold)
+ls .vscode/ 2>/dev/null                                                # VS Code
+ls .cursor/ 2>/dev/null                                                # Cursor
+ls .idea/ 2>/dev/null                                                  # JetBrains
+ls .zed/ 2>/dev/null                                                   # Zed
+
+# Existing dev-setup / onboarding docs
+ls docs/dev-setup.md docs/SETUP.md docs/INSTALL.md docs/getting-started.md 2>/dev/null
+grep -l 'install\|setup\|getting started' README.md 2>/dev/null         # may already document setup
+
+# Existing commit-log or audit trail (rare but check)
+ls docs/commit-log.md AUDIT.md 2>/dev/null
 ```
+
+## Hygiene-file inventory (drives interview Round 3)
+
+For each of these files, the interview asks the user whether to scaffold or update:
+
+| File | If present | If missing |
+|------|-----------|-----------|
+| `README.md` | Read it for project description + arch hints. Offer to append an "AI Agent SDLC" section. | Offer to scaffold from `templates/README.md`. |
+| `LICENSE` | Skip — leave it alone. | Ask which SPDX license (MIT, Apache-2.0, Proprietary, None). Scaffold accordingly. |
+| `CODEOWNERS` | Skip unless user requests update. | Offer to scaffold an empty `CODEOWNERS` with the user as the default owner. |
+| `.gitignore` | Read it. Offer to *append* missing language-specific blocks. | Offer to scaffold `templates/gitignore.template` with detected-language blocks. |
+| `.editorconfig` | Skip. | Optional — offer a minimal one only if multiple IDEs are picked. |
+| `.vscode/`, `.cursor/`, `.idea/`, `.zed/` | Read what's there. Don't overwrite. | Offer to scaffold for the user's selected IDE targets. |
+| `docs/dev-setup.md` (or equivalent) | Read it; the Tech-stack section of `OVERVIEW.md` should link to it. | Offer to scaffold `templates/docs/dev-setup.md`. |
+| `docs/commit-log.md` | Skip (assume the prior setup is in place). | Always create — it's part of the commit-tracking system. |
 
 ## Reporting the classification
 
 After running the commands, give the user one short paragraph and stop:
 
-> *"This is an **early-stage** TypeScript repo (24 commits, Vitest already configured, no `CONTRIBUTING.md`, no `docs/`, GitHub Actions CI in place). I'll preserve Vitest and the CI, scaffold the full docs/agents triad, write a new `CONTRIBUTING.md`, and add agent configs for Claude, Codex, and Cursor. I won't touch your existing CI workflow or `package.json` scripts. Ready to ask the interview questions?"*
+> *"This is an **early-stage** TypeScript repo (24 commits, Vitest already configured, no `CONTRIBUTING.md`, no `docs/`, GitHub Actions CI in place; README and `.gitignore` present, no LICENSE / CODEOWNERS / dev-setup doc). I'll preserve Vitest and the CI, scaffold the full docs/agents triad, write a new `CONTRIBUTING.md`, add agent configs for Claude/Codex/Cursor, and offer to fill in the missing hygiene files. I won't touch your existing CI workflow, `package.json` scripts, or README without your sign-off. Ready to move to the discovery step (any external docs to share?) and then the interview?"*
 
-Wait for confirmation before moving to Phase 2.
+Wait for confirmation before moving to **Phase 1.5 (DISCOVER)** — see `reference/discovery.md`.
