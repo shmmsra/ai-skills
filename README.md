@@ -103,3 +103,15 @@ Add this to `.gitattributes` in any consuming repo to keep vendored skills out o
 ```
 .claude/skills/** linguist-vendored
 ```
+
+---
+
+## License
+
+Released under the [MIT License](./LICENSE) — Copyright (c) 2026 Shivam Mishra.
+
+You are free to use, copy, modify, and redistribute these skills and install
+scripts, including in commercial projects. The software is provided **"AS IS",
+without warranty of any kind**. The author accepts **no liability** for any
+damages, data loss, broken builds, or other consequences arising from use of
+this code. See [`LICENSE`](./LICENSE) for the full text.
