@@ -1,6 +1,51 @@
 # ai-skills
 
-A collection of reusable Claude Code skills, designed to be consumed by other repos via git subtree.
+A collection of reusable AI agent skills. Install them into any repo in seconds, for Claude Code, Cursor, GitHub Copilot, Gemini CLI, Windsurf, or Aider.
+
+## Quick install
+
+**macOS / Linux**
+```bash
+curl -fsSL https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell)**
+```powershell
+irm https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.ps1 | iex
+```
+
+Both scripts are interactive — they ask which skills to install, whether to install at the project or user level, and which agents to target.
+
+**First run** installs skills; re-running detects what's already present and asks whether to update. To force-update without the prompt:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.sh | bash -s -- --update
+# or:  UPDATE_MODE=1 curl -fsSL ... | bash
+```
+
+```powershell
+# Downloaded version:
+.\install.ps1 -Update
+# Piped version:
+$env:UPDATE_MODE=1; irm https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.ps1 | iex
+```
+
+The scripts also auto-detect if the target folder is a git repo and add `linguist-vendored` entries to `.gitattributes` (suppresses skill files from GitHub's language stats). After a Claude Code project install, non-skill items left behind by `git subtree add` (e.g. `scripts/`, `README.md`) are detected and offered for cleanup.
+
+### What gets installed where
+
+| Agent | Project-level | User-level |
+|---|---|---|
+| Claude Code | `.claude/skills/<name>/` | `~/.claude/skills/<name>/` |
+| Cursor | `.cursor/rules/<name>.mdc` | *(falls back to project)* |
+| GitHub Copilot | `.github/copilot-instructions.md` | *(falls back to project)* |
+| Gemini CLI | `GEMINI.md` | `~/.gemini/GEMINI.md` |
+| Windsurf | `.windsurfrules` | `~/.windsurfrules` |
+| Aider | `CONVENTIONS.md` | *(falls back to project)* |
+
+> **Claude Code** gets the full skill directory (SKILL.md + all supporting files). All other agents receive only the skill body, formatted for their instruction-file convention. Supporting files such as `templates/` and `reference/` are Claude Code-specific and are not copied for other agents.
+
+---
 
 ## Layout
 
