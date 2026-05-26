@@ -288,8 +288,8 @@ install_claude_code() {
   cp -r "$WORKDIR/repo/$skill/." "$dest/"
   ok "Claude Code  →  $dest/"
 
-  # Suppress language stat noise for vendored skill files
-  [ "$SCOPE" = "project" ] && add_gitattribute ".claude/skills/** linguist-vendored"
+  # Suppress language stat noise for vendored skill files (per-skill scope)
+  [ "$SCOPE" = "project" ] && add_gitattribute ".claude/skills/$skill/** linguist-vendored"
 }
 
 install_cursor() {
@@ -314,7 +314,7 @@ install_cursor() {
   } > "$dest_file"
   ok "Cursor       →  $dest_file"
 
-  add_gitattribute ".cursor/rules/*.mdc linguist-vendored"
+  add_gitattribute ".cursor/rules/$skill.mdc linguist-vendored"
 }
 
 install_copilot() {

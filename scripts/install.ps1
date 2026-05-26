@@ -278,7 +278,7 @@ function Install-ClaudeCode {
     Copy-Item -Path "$WorkDir\repo\$Skill\*" -Destination $dest -Recurse -Force
     Write-Ok "Claude Code  ->  $dest\"
 
-    if ($Scope -eq 'project') { Add-GitAttribute ".claude/skills/** linguist-vendored" }
+    if ($Scope -eq 'project') { Add-GitAttribute ".claude/skills/$Skill/** linguist-vendored" }
 }
 
 function Install-Cursor {
@@ -301,7 +301,7 @@ function Install-Cursor {
     Set-Content -Path $destFile -Value "---`ndescription: `"$desc`"`nglobs:`nalwaysApply: false`n---`n`n$body" -Encoding UTF8
     Write-Ok "Cursor       ->  $destFile"
 
-    Add-GitAttribute ".cursor/rules/*.mdc linguist-vendored"
+    Add-GitAttribute ".cursor/rules/$Skill.mdc linguist-vendored"
 }
 
 function Install-Copilot {

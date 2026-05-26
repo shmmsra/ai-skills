@@ -32,7 +32,9 @@ curl -fsSL https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/inst
 $env:UPDATE_MODE=1; irm https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.ps1 | iex
 ```
 
-The scripts also auto-detect if the target folder is a git repo and add `linguist-vendored` entries to `.gitattributes` (suppresses skill files from GitHub's language stats).
+The scripts also auto-detect if the target folder is a git repo and add per-skill `linguist-vendored` entries to `.gitattributes` (suppresses skill files from GitHub's language stats). Only files installed by the script are marked — any skills you author yourself are untouched.
+
+> **Upgrading from an older install?** Earlier versions wrote broad patterns (`.claude/skills/** linguist-vendored` and `.cursor/rules/*.mdc linguist-vendored`). Those still work but also mark *your own* skills as vendored. Remove them manually from `.gitattributes` if you want per-skill scoping.
 
 ### What gets installed where
 
@@ -104,11 +106,14 @@ Edit skills in this repo and pull them into consumers. Do not edit the vendored 
 
 ## Tip: suppress language stats in consumers
 
-Add this to `.gitattributes` in any consuming repo to keep vendored skills out of GitHub's language breakdown:
+If you're using the install script, this is handled automatically per-skill. If you're vendoring skills another way (e.g. git subtree), add per-skill lines to `.gitattributes`:
 
 ```
-.claude/skills/** linguist-vendored
+.claude/skills/<skill-name>/** linguist-vendored
+.cursor/rules/<skill-name>.mdc linguist-vendored
 ```
+
+Per-skill entries keep the rule scoped to vendored files only — your own custom skills in the same folder still count toward GitHub's language stats.
 
 ---
 

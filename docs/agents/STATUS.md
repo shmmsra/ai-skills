@@ -25,7 +25,7 @@
 
 The next logical work, in priority order. Update at the end of every session.
 
-*No open tickets — backlog is clear.*
+1. AISKL-004 — scope `linguist-vendored` per-skill (Claude + Cursor); stop broad globs
 
 ---
 

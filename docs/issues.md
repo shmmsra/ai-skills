@@ -44,7 +44,31 @@ Tickets use the prefix `AISKL-NNN`, numbered sequentially (e.g. `AISKL-001`, `AI
 
 ## Open Issues
 
-*No open issues.*
+### AISKL-004 · P2 · OPEN · Enhancement
+**Scope `linguist-vendored` per-skill instead of broad globs (Claude + Cursor)**
+
+`scripts/install.sh` and `scripts/install.ps1` write two broad patterns to `.gitattributes`:
+
+- `.claude/skills/** linguist-vendored`
+- `.cursor/rules/*.mdc linguist-vendored`
+
+These over-claim: they mark *every* file in those folders as vendored, including skills the consumer authored themselves. "Vendored" should mean "third-party files we installed, not yours."
+
+**Approach** (non-destructive): emit one entry per installed skill, scoped to the exact path. Do **not** rewrite existing `.gitattributes` to remove old broad patterns — risky, could clobber unrelated edits. Document the manual cleanup instead.
+
+- Claude: `.claude/skills/<skill>/** linguist-vendored`
+- Cursor: `.cursor/rules/<skill>.mdc linguist-vendored`
+
+**Acceptance criteria**:
+- [ ] `install.sh` writes `.claude/skills/<skill>/** linguist-vendored` per skill (project scope only)
+- [ ] `install.sh` writes `.cursor/rules/<skill>.mdc linguist-vendored` per skill
+- [ ] `install.ps1` mirrors both behaviours
+- [ ] Existing `add_gitattribute` dedup logic prevents duplicates on re-install
+- [ ] README adds a short note about manual cleanup of old broad patterns
+- [ ] `docs/manual-testing.md`: add scenarios for per-skill entries, user-authored skill untouched, and no-duplicate re-install
+- [ ] `make check` passes
+
+**Notes**: Linguist handles overlapping `linguist-vendored` patterns without issue — more-specific patterns coexist fine with broader ones. Slightly noisier `.gitattributes` (N lines vs 1) but with ~2 skills today and a ceiling of ~10, this is acceptable.
 
 ---
 

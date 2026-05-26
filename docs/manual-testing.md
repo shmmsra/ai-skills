@@ -184,4 +184,80 @@ bash /path/to/ai-skills/scripts/install.sh --update
 
 ---
 
+---
+
+## Per-skill `linguist-vendored` scoping (AISKL-004)
+
+### Scenario A — two skills produce two distinct `.gitattributes` lines
+
+**Test command(s)**:
+```bash
+# In a clean git repo with no .gitattributes
+bash /path/to/ai-skills/scripts/install.sh
+# select: ai-sdlc-bootstrap + book-companion, project scope, claude-code + cursor agents
+cat .gitattributes
+```
+
+**Setup**: Fresh git repo, no prior `.gitattributes`.
+
+**What to observe**: `.gitattributes` contains four lines — two for Claude Code skills, two for Cursor skills — each scoped to a single skill path.
+
+**Pass criteria**: file contains exactly:
+```
+.claude/skills/ai-sdlc-bootstrap/** linguist-vendored
+.cursor/rules/ai-sdlc-bootstrap.mdc linguist-vendored
+.claude/skills/book-companion/** linguist-vendored
+.cursor/rules/book-companion.mdc linguist-vendored
+```
+(order may vary depending on selection order)
+
+**Fail indicators**:
+- Broad patterns like `.claude/skills/** linguist-vendored` written
+- Missing entries for any installed skill
+- Duplicate entries on re-install
+
+---
+
+### Scenario B — user-authored skill not marked as vendored
+
+**Test command(s)**:
+```bash
+mkdir -p .claude/skills/my-custom-skill
+echo "# my skill" > .claude/skills/my-custom-skill/SKILL.md
+bash /path/to/ai-skills/scripts/install.sh
+# select: ai-sdlc-bootstrap only
+grep "my-custom-skill" .gitattributes && echo "FAIL" || echo "PASS"
+```
+
+**Setup**: User has already authored a skill at `.claude/skills/my-custom-skill/`.
+
+**What to observe**: After installing `ai-sdlc-bootstrap`, `.gitattributes` does NOT contain any line referencing `my-custom-skill`.
+
+**Pass criteria**:
+- `grep my-custom-skill .gitattributes` returns nothing (or "PASS" message shown)
+- Only the installed skill gets a `linguist-vendored` line
+
+**Fail indicators**:
+- `my-custom-skill` appears in `.gitattributes`
+- Broad glob pattern installed
+
+---
+
+### Scenario C — re-install does not duplicate entries
+
+**Test command(s)**:
+```bash
+bash /path/to/ai-skills/scripts/install.sh --update
+# select same skills as previous install
+grep -c "ai-sdlc-bootstrap" .gitattributes
+```
+
+**Setup**: Skill already installed once, `.gitattributes` already has its per-skill line.
+
+**Pass criteria**: `grep -c` shows the same count as before re-install (typically 2: one for Claude Code, one for Cursor) — no duplicates.
+
+**Fail indicators**: count increases on each re-install.
+
+---
+
 *Add new sections below this line as features land. Group by feature area (e.g. install, skill-body, templates).*
