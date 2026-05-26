@@ -25,7 +25,7 @@
 
 The next logical work, in priority order. Update at the end of every session.
 
-1. AISKL-004 — scope `linguist-vendored` per-skill (Claude + Cursor); stop broad globs
+*No open tickets — backlog is clear.*
 
 ---
 
@@ -33,6 +33,7 @@ The next logical work, in priority order. Update at the end of every session.
 
 | Date | Ticket | Summary | Commit |
 |------|--------|---------|--------|
+| 2026-05-26 | AISKL-004 | Scope linguist-vendored per-skill (Claude + Cursor) | f5c6ba2 |
 | 2026-05-26 | AISKL-003 | Add per-skill VERSION + README; install no-op when version matches | 6ad9563 |
 | 2026-05-26 | AISKL-002 | Move skills to skills/ + skills-dist CI branch | 24bda6c |
 | 2026-05-26 | — | ai-sdlc-bootstrap scaffold | 8cd82a8 |
