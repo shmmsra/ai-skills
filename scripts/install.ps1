@@ -59,12 +59,12 @@ New-Item -ItemType Directory -Path $WorkDir | Out-Null
 try {
 
 Write-Log "Fetching skills repository (shallow clone)..."
-git clone --depth=1 --quiet $RepoUrl "$WorkDir\repo" 2>&1 | Out-Null
+git clone --depth=1 --quiet --branch dist $RepoUrl "$WorkDir\repo" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { Fail "Failed to clone $RepoUrl" }
 
 # ── discover skills ───────────────────────────────────────────────────
 $AllSkills = @(
-    Get-ChildItem -Path "$WorkDir\repo\skills" -Directory |
+    Get-ChildItem -Path "$WorkDir\repo" -Directory |
     Where-Object { Test-Path (Join-Path $_.FullName 'SKILL.md') } |
     Select-Object -ExpandProperty Name | Sort-Object
 )
@@ -265,7 +265,7 @@ function Install-ClaudeCode {
     }
 
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
-    Copy-Item -Path "$WorkDir\repo\skills\$Skill\*" -Destination $dest -Recurse -Force
+    Copy-Item -Path "$WorkDir\repo\$Skill\*" -Destination $dest -Recurse -Force
     Write-Ok "Claude Code  ->  $dest\"
 
     if ($Scope -eq 'project') { Add-GitAttribute ".claude/skills/** linguist-vendored" }
@@ -285,7 +285,7 @@ function Install-Cursor {
     }
 
     New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-    $src  = "$WorkDir\repo\skills\$Skill\SKILL.md"
+    $src  = "$WorkDir\repo\$Skill\SKILL.md"
     $desc = Get-SkillDesc $src
     $body = Get-SkillBody $src
     Set-Content -Path $destFile -Value "---`ndescription: `"$desc`"`nglobs:`nalwaysApply: false`n---`n`n$body" -Encoding UTF8
@@ -301,7 +301,7 @@ function Install-Copilot {
     }
     $dest = ".github\copilot-instructions.md"
     New-Item -ItemType Directory -Path ".github" -Force | Out-Null
-    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Copilot      ->  $dest"
@@ -313,7 +313,7 @@ function Install-Gemini {
         New-Item -ItemType Directory -Path "$HOME\.gemini" -Force | Out-Null
         "$HOME\.gemini\GEMINI.md"
     } else { "GEMINI.md" }
-    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Gemini       ->  $dest"
@@ -322,7 +322,7 @@ function Install-Gemini {
 function Install-Windsurf {
     param([string]$Skill)
     $dest    = if ($Scope -eq 'user') { "$HOME\.windsurfrules" } else { ".windsurfrules" }
-    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Windsurf     ->  $dest"
@@ -334,7 +334,7 @@ function Install-Aider {
         Write-Warn "    Aider: no standard user-level location — installing at project level"
     }
     $dest    = "CONVENTIONS.md"
-    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Aider        ->  $dest"

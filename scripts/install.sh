@@ -46,12 +46,12 @@ WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
 
 log "Fetching skills repository (shallow clone)…"
-git clone --depth=1 --quiet "$REPO_HTTPS" "$WORKDIR/repo" \
+git clone --depth=1 --quiet --branch dist "$REPO_HTTPS" "$WORKDIR/repo" \
   || die "Failed to clone $REPO_HTTPS"
 
 # ── discover skills ───────────────────────────────────────────────────
 ALL_SKILLS=()
-for _d in "$WORKDIR/repo"/skills/*/; do
+for _d in "$WORKDIR/repo"/*/; do
   [ -f "${_d}SKILL.md" ] && ALL_SKILLS+=("$(basename "$_d")")
 done
 
@@ -278,7 +278,7 @@ install_claude_code() {
   fi
 
   mkdir -p "$dest"
-  cp -r "$WORKDIR/repo/skills/$skill/." "$dest/"
+  cp -r "$WORKDIR/repo/$skill/." "$dest/"
   ok "Claude Code  →  $dest/"
 
   # Suppress language stat noise for vendored skill files
@@ -297,7 +297,7 @@ install_cursor() {
   fi
 
   mkdir -p "$dest"
-  local src="$WORKDIR/repo/skills/$skill/SKILL.md"
+  local src="$WORKDIR/repo/$skill/SKILL.md"
   {
     printf -- '---\n'
     printf 'description: "%s"\n' "$(skill_desc "$src")"
@@ -315,7 +315,7 @@ install_copilot() {
   [ "$SCOPE" = "user" ] && warn "    GitHub Copilot: no standard user-level location — installing at project level"
   local dest=".github/copilot-instructions.md"
   mkdir -p .github
-  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Copilot      →  $dest"
@@ -328,7 +328,7 @@ install_gemini() {
   else
     dest="GEMINI.md"
   fi
-  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Gemini       →  $dest"
@@ -337,7 +337,7 @@ install_gemini() {
 install_windsurf() {
   local skill="$1" dest
   [ "$SCOPE" = "user" ] && dest="$HOME/.windsurfrules" || dest=".windsurfrules"
-  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Windsurf     →  $dest"
@@ -347,7 +347,7 @@ install_aider() {
   local skill="$1"
   [ "$SCOPE" = "user" ] && warn "    Aider: no standard user-level location — installing at project level"
   local dest="CONVENTIONS.md"
-  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Aider        →  $dest"
