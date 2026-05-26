@@ -106,6 +106,21 @@ Add this to `.gitattributes` in any consuming repo to keep vendored skills out o
 
 ---
 
+## AI-Driven SDLC
+
+This repo is developed by humans + AI agents using the [ai-sdlc-bootstrap](https://github.com/shmmsra/ai-skills) workflow. Before contributing:
+
+- **Read first**: [`docs/agents/OVERVIEW.md`](docs/agents/OVERVIEW.md) (context), [`docs/agents/CONVENTIONS.md`](docs/agents/CONVENTIONS.md) (rules), [`docs/agents/STATUS.md`](docs/agents/STATUS.md) (current state)
+- **Workflow**: [`CONTRIBUTING.md`](CONTRIBUTING.md) — plan → approve → implement → manual test → commit
+- **Tickets**: [`docs/issues.md`](docs/issues.md) (`AISKL-NNN` prefix)
+
+```bash
+make setup-hooks   # one-time: installs pre-commit gate
+make check         # run before every commit
+```
+
+---
+
 ## License
 
 Released under the [MIT License](./LICENSE) — Copyright (c) 2026 Shivam Mishra.
