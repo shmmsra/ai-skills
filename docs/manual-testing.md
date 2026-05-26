@@ -93,12 +93,12 @@ bash /path/to/ai-skills/scripts/install.sh
 
 ---
 
-## skills-dist branch (git subtree consumers)
+## dist branch (git subtree consumers)
 
 **Test command(s)**:
 ```bash
 # In a fresh test repo
-git subtree add --prefix=.claude/skills https://github.com/shmmsra/ai-skills skills-dist --squash
+git subtree add --prefix=.claude/skills https://github.com/shmmsra/ai-skills dist --squash
 ls .claude/skills/
 ```
 

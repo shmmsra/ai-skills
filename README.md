@@ -70,18 +70,18 @@ Claude only looks **one level deep** inside `.claude/skills/` — it does not re
 
 ## Consuming this repo via git subtree
 
-Skills are published to a dedicated `skills-dist` branch that contains **only** the skill directories at the root — no `scripts/`, `docs/`, or other repo files. This branch is auto-updated by CI on every push to `main` that changes `skills/**`.
+Skills are published to a dedicated `dist` branch that contains **only** the skill directories at the root — no `scripts/`, `docs/`, or other repo files. This branch is auto-updated by CI on every push to `main` that changes `skills/**`.
 
 ### Initial setup (run once in the consuming repo)
 
 ```bash
-git subtree add --prefix=.claude/skills https://github.com/shmmsra/ai-skills skills-dist --squash
+git subtree add --prefix=.claude/skills https://github.com/shmmsra/ai-skills dist --squash
 ```
 
 ### Pulling updates
 
 ```bash
-git subtree pull --prefix=.claude/skills https://github.com/shmmsra/ai-skills skills-dist --squash
+git subtree pull --prefix=.claude/skills https://github.com/shmmsra/ai-skills dist --squash
 ```
 
 ### Optional Makefile snippet
@@ -90,7 +90,7 @@ Copy this into your consuming repo's `Makefile`:
 
 ```makefile
 SKILLS_REMOTE := https://github.com/shmmsra/ai-skills
-SKILLS_BRANCH := skills-dist
+SKILLS_BRANCH := dist
 
 skills-update:
 	git subtree pull --prefix=.claude/skills $(SKILLS_REMOTE) $(SKILLS_BRANCH) --squash

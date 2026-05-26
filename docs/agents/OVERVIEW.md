@@ -16,7 +16,7 @@
 
 ## Architecture in 30 seconds
 
-Each skill is a self-contained directory under `skills/`. A `SKILL.md` defines the skill body (instructions, context, templates). Install scripts (`scripts/install.sh`, `scripts/install.ps1`) let consumers pull any skill into their own repo for any supported agent. A `skills-dist` branch (auto-published by CI on every push to `main`) exposes only the skill directories — no repo meta files — for clean `git subtree` consumption.
+Each skill is a self-contained directory under `skills/`. A `SKILL.md` defines the skill body (instructions, context, templates). Install scripts (`scripts/install.sh`, `scripts/install.ps1`) let consumers pull any skill into their own repo for any supported agent. A `dist` branch (auto-published by CI on every push to `main`) exposes only the skill directories — no repo meta files — for clean `git subtree` consumption.
 
 ```
 ai-skills/
@@ -95,7 +95,7 @@ make setup-hooks  # one-time: installs pre-commit hook
 │   ├── install.ps1             # Windows PowerShell installer
 │   └── setup-hooks.sh          # Installs pre-commit hook
 └── .github/workflows/
-    └── publish-dist.yml        # Auto-publishes skills-dist branch on push to main
+    └── publish-dist.yml        # Auto-publishes dist branch on push to main
 ```
 
 *Update this tree as the project grows. Agents read it to navigate.*

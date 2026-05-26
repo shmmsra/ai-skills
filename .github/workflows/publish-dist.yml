@@ -1,4 +1,4 @@
-name: Publish skills-dist
+name: Publish dist
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Split skills/ into skills-dist branch
+      - name: Split skills/ into dist branch
         run: |
-          git subtree split --prefix=skills --branch skills-dist
-          git push origin skills-dist --force
+          git subtree split --prefix=skills --branch dist
+          git push origin dist --force

@@ -7,7 +7,7 @@ help:
 	@echo "  make check          Pre-commit gate: shell script syntax check"
 	@echo "  make setup-hooks    Install .git/hooks/pre-commit (run once after clone)"
 	@echo "  make lint           Shell script syntax check (same as check)"
-	@echo "  make publish-dist   Split skills/ into skills-dist branch (CI does this automatically)"
+	@echo "  make publish-dist   Split skills/ into dist branch (CI does this automatically)"
 	@echo "  make test           No automated test suite — see docs/manual-testing.md"
 	@echo "  make clean          No build artifacts to clean"
 
@@ -28,12 +28,12 @@ lint:
 	@find .claude/skills -name '*.sh' -exec bash -n {} \; 2>/dev/null && echo "✓ .claude/skills/ — all shell scripts are syntactically valid" || true
 
 # ── Dist branch ──────────────────────────────────────────────────────────────
-# Splits skills/ into the skills-dist branch. CI runs this automatically on
+# Splits skills/ into the dist branch. CI runs this automatically on
 # every push to main that touches skills/**. Run locally to test the split.
 
 publish-dist:
-	git subtree split --prefix=skills --branch skills-dist
-	git push origin skills-dist --force
+	git subtree split --prefix=skills --branch dist
+	git push origin dist --force
 
 # ── Stubs ─────────────────────────────────────────────────────────────────────
 
