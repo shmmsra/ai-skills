@@ -44,15 +44,30 @@ Tickets use the prefix `AISKL-NNN`, numbered sequentially (e.g. `AISKL-001`, `AI
 
 ## Open Issues
 
-### AISKL-001 · P1 · OPEN · Bootstrap
-**First real feature**
+
+
+### AISKL-003 · P1 · OPEN · Feature
+**Add per-skill versioning via a `VERSION` file — install becomes a no-op when version matches**
+
+Each skill should carry its own version number so install scripts can detect whether the consumer's copy is already up-to-date and skip the install silently. If the installed version matches the source, the install is a no-op unless `--update` / `UPDATE_MODE=1` is explicitly requested.
+
+**Recommended approach**: a plain `VERSION` file at the root of each skill directory containing a single semver string (e.g. `1.0.0`). Trivially readable by humans (`cat .claude/skills/ai-sdlc-bootstrap/VERSION`) and by shell scripts without any parser (`jq`, frontmatter parsers, etc.). Bump rules:
+
+- `MAJOR` — breaking change to `SKILL.md` interface or template structure (existing consumers may need to re-read the skill)
+- `MINOR` — new templates, references, or capabilities added; backwards compatible
+- `PATCH` — bug fixes, typo corrections, no behaviour change
 
 **Acceptance criteria**:
-- [ ] *Add the first real piece of product functionality here*
-- [ ] Documented in `docs/manual-testing.md`
-- [ ] Docs updated (CHANGELOG, STATUS)
+- [ ] `VERSION` file added to every skill directory (start at `1.0.0` for all existing skills)
+- [ ] `scripts/install.sh`: on install, read `VERSION` from the source skill; if the destination already has an identical `VERSION` file, print `"<skill> v1.0.0 already installed — skipping (pass --update to force)"` and skip
+- [ ] `scripts/install.ps1`: same logic as above
+- [ ] `--update` / `UPDATE_MODE=1` flag overrides the version check and always writes the latest files (existing behaviour unchanged)
+- [ ] On successful install or update, the `VERSION` file is written to the destination alongside the skill files
+- [ ] README updated: mention that re-running the installer is safe and version-gated; update the `--update` / force-update documentation
+- [ ] `docs/manual-testing.md`: add a test scenario covering same-version no-op, version-mismatch update prompt, and `--update` force-override
+- [ ] `make check` passes
 
-**Notes**: Replace this with the actual first ticket. The point of having `AISKL-001` here is so agents see the file isn't empty and understand the format.
+**Notes**: Depends on AISKL-002 (skills move to `skills/` directory) — implement the `VERSION` file at the final path (`skills/<name>/VERSION`) rather than the current root-level path, to avoid a second move. If AISKL-002 is not done yet, add the `VERSION` files at the root and adjust paths when AISKL-002 lands. A `skill.json` metadata file was considered but rejected — JSON parsing in bash requires `jq` (not universally available) and the version is the only field needed right now; a plain file is simpler and more portable. If richer metadata is needed in future, revisit in a new ADR.
 
 ---
 
@@ -64,6 +79,8 @@ Tickets use the prefix `AISKL-NNN`, numbered sequentially (e.g. `AISKL-001`, `AI
 
 | Date | Ticket | Title | Commit |
 |------|--------|-------|--------|
+| 2026-05-26 | AISKL-002 | Move skills to skills/ + skills-dist CI branch | pending |
+| 2026-05-26 | AISKL-001 | Scaffold placeholder — superseded by AISKL-002 and AISKL-003 | REJECTED |
 | 2026-05-26 | — | ai-sdlc-bootstrap scaffold | pending |
 
 *When a ticket is closed: move it to this table, set the commit hash, and remove it from the Open section. Keep the last ~20 closures here; archive older ones to `docs/CHANGELOG.md`.*

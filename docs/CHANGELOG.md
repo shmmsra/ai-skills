@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-26 — AISKL-002: move skills to skills/ and add skills-dist CI
+
+**What changed**: Moved `ai-sdlc-bootstrap/` and `book-companion/` under a `skills/` subdirectory. Added a GitHub Actions workflow (`publish-dist.yml`) that splits `skills/` into a `skills-dist` branch on every push to `main`, giving git-subtree consumers a clean skills-only branch. Updated `scripts/install.sh` and `install.ps1` to discover and copy skills from `skills/<name>/`. Removed the now-unnecessary `cleanup_skills_dir` function from both scripts. Added `make publish-dist` target. Updated README, OVERVIEW.md, and manual-testing.md.
+
+**Why**: Root directory was getting noisy as the skill library grew. The `skills-dist` branch lets subtree consumers pull only skill files without getting repo scaffolding. The CI automation means the dist branch is always in sync with `main` without any manual step.
+
+**What was rejected**: Adding tags per commit to the dist branch for back-referencing — unnecessary noise given that dist commit messages already mirror the originating main commit messages.
+
+**What's next**: AISKL-003 — per-skill `VERSION` file for install no-op detection.
+
+---
+
 ## 2026-05-26 — ai-sdlc-bootstrap scaffold
 
 **What changed**: Bootstrapped the AI-driven SDLC workflow on this repo via the `ai-sdlc-bootstrap` skill. Added agent-config layer (CLAUDE.md, AGENTS.md, GEMINI.md), `docs/agents/` triad, `CONTRIBUTING.md`, `docs/issues.md`, ADR template, and pre-commit gate (`make check`).

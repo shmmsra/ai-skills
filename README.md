@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/inst
 $env:UPDATE_MODE=1; irm https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.ps1 | iex
 ```
 
-The scripts also auto-detect if the target folder is a git repo and add `linguist-vendored` entries to `.gitattributes` (suppresses skill files from GitHub's language stats). After a Claude Code project install, non-skill items left behind by `git subtree add` (e.g. `scripts/`, `README.md`) are detected and offered for cleanup.
+The scripts also auto-detect if the target folder is a git repo and add `linguist-vendored` entries to `.gitattributes` (suppresses skill files from GitHub's language stats).
 
 ### What gets installed where
 
@@ -49,13 +49,18 @@ The scripts also auto-detect if the target folder is a git repo and add `linguis
 
 ## Layout
 
-Each skill lives in its own top-level directory containing a `SKILL.md` and any supporting files. No grouping subfolders, no nesting — only skill directories and repo meta files at the root.
+Skills live under `skills/`, one directory per skill. Repo meta files (`scripts/`, `docs/`, `Makefile`, etc.) stay at the root and are never installed into consumers.
 
 ```
 ai-skills/
-├── <skill-name>/
-│   ├── SKILL.md
-│   └── (optional: references/, templates/, etc.)
+├── skills/
+│   ├── <skill-name>/
+│   │   ├── SKILL.md
+│   │   └── (optional: references/, templates/, etc.)
+│   └── ...
+├── scripts/
+│   ├── install.sh
+│   └── install.ps1
 └── ...
 ```
 
@@ -63,20 +68,20 @@ ai-skills/
 
 Claude only looks **one level deep** inside `.claude/skills/` — it does not recurse into subdirectories. A skill at `.claude/skills/<skill-name>/SKILL.md` is found; a skill at `.claude/skills/ai-skills/<skill-name>/SKILL.md` is not.
 
-This means the subtree must be rooted at `.claude/skills/` directly, not a subdirectory of it.
+## Consuming this repo via git subtree
 
-## Consuming this repo
+Skills are published to a dedicated `skills-dist` branch that contains **only** the skill directories at the root — no `scripts/`, `docs/`, or other repo files. This branch is auto-updated by CI on every push to `main` that changes `skills/**`.
 
 ### Initial setup (run once in the consuming repo)
 
 ```bash
-git subtree add --prefix=.claude/skills <this-repo-url> main --squash
+git subtree add --prefix=.claude/skills https://github.com/shmmsra/ai-skills skills-dist --squash
 ```
 
 ### Pulling updates
 
 ```bash
-git subtree pull --prefix=.claude/skills <this-repo-url> main --squash
+git subtree pull --prefix=.claude/skills https://github.com/shmmsra/ai-skills skills-dist --squash
 ```
 
 ### Optional Makefile snippet
@@ -84,12 +89,11 @@ git subtree pull --prefix=.claude/skills <this-repo-url> main --squash
 Copy this into your consuming repo's `Makefile`:
 
 ```makefile
-SKILLS_PREFIX := .claude/skills
-SKILLS_REMOTE := <this-repo-url>
-SKILLS_BRANCH := main
+SKILLS_REMOTE := https://github.com/shmmsra/ai-skills
+SKILLS_BRANCH := skills-dist
 
 skills-update:
-	git subtree pull --prefix=$(SKILLS_PREFIX) $(SKILLS_REMOTE) $(SKILLS_BRANCH) --squash
+	git subtree pull --prefix=.claude/skills $(SKILLS_REMOTE) $(SKILLS_BRANCH) --squash
 ```
 
 ## Editing convention

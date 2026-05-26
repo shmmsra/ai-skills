@@ -79,15 +79,35 @@ bash /path/to/ai-skills/scripts/install.sh
 **What to observe**: Interactive prompts for skill selection, install level (project/user), and agent targets. Files appear in the expected locations after confirmation.
 
 **Pass criteria**:
-- Selected skills appear at `.claude/skills/<name>/` (project-level) or `~/.claude/skills/<name>/` (user-level)
+- Selected skills appear at `.claude/skills/<name>/` (project-level) or `~/.claude/skills/<name>/` (user-level) — sourced from `skills/<name>/` in the cloned repo
 - For Cursor: `.cursor/rules/<name>.mdc` is created
 - `.gitattributes` gets `linguist-vendored` entry for `.claude/skills/**`
 - Re-running the script detects existing installs and prompts for update
+- No `docs/`, `scripts/`, `Makefile`, or other repo meta files are copied to the consumer
 
 **Fail indicators**:
 - Script exits early with an error
 - Files installed to wrong path
 - `linguist-vendored` entry not added to `.gitattributes`
+- Repo meta files (non-skill content) copied into `.claude/skills/`
+
+---
+
+## skills-dist branch (git subtree consumers)
+
+**Test command(s)**:
+```bash
+# In a fresh test repo
+git subtree add --prefix=.claude/skills https://github.com/shmmsra/ai-skills skills-dist --squash
+ls .claude/skills/
+```
+
+**Setup**: Fresh git repo with no existing `.claude/skills/` directory.
+
+**Pass criteria**:
+- `.claude/skills/<skill-name>/SKILL.md` exists for each skill
+- No `scripts/`, `docs/`, `Makefile`, or other meta files appear under `.claude/skills/`
+- `git subtree pull` subsequently fetches updates cleanly
 
 ---
 

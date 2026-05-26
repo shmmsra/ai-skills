@@ -12,7 +12,8 @@
 | Phase | Status |
 |-------|--------|
 | 0 — Project bootstrap | ✅ Complete |
-| 1 — Initial implementation | 📋 Planned |
+| 1 — Skills restructure + dist CI | ✅ Complete |
+| 2 — Per-skill versioning | 📋 Planned |
 
 *Update this table as phases progress. Use ✅ Complete / 🔄 In progress / 📋 Planned / 🚫 Blocked.*
 
@@ -24,7 +25,7 @@
 
 The next logical work, in priority order. Update at the end of every session.
 
-1. *(none yet — fresh scaffold; populate from `docs/issues.md` as tickets are added)*
+1. AISKL-003 — add per-skill `VERSION` file; install becomes a no-op when version matches
 
 ---
 

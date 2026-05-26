@@ -64,7 +64,7 @@ if ($LASTEXITCODE -ne 0) { Fail "Failed to clone $RepoUrl" }
 
 # ── discover skills ───────────────────────────────────────────────────
 $AllSkills = @(
-    Get-ChildItem -Path "$WorkDir\repo" -Directory |
+    Get-ChildItem -Path "$WorkDir\repo\skills" -Directory |
     Where-Object { Test-Path (Join-Path $_.FullName 'SKILL.md') } |
     Select-Object -ExpandProperty Name | Sort-Object
 )
@@ -136,48 +136,6 @@ function Add-GitAttribute {
     }
 }
 
-# ── helper: remove non-skill items from .claude\skills\ ──────────────
-function Invoke-CleanupSkillsDir {
-    $skillsDir = ".claude\skills"
-    if (-not (Test-Path $skillsDir)) { return }
-
-    $extra = @()
-
-    # Subdirs without a SKILL.md are not skills
-    Get-ChildItem -Path $skillsDir -Directory | ForEach-Object {
-        if (-not (Test-Path (Join-Path $_.FullName 'SKILL.md'))) {
-            $extra += @{ Type = 'dir'; Name = $_.Name }
-        }
-    }
-
-    # Files at the root of the skills dir don't belong
-    Get-ChildItem -Path $skillsDir -File | ForEach-Object {
-        $extra += @{ Type = 'file'; Name = $_.Name }
-    }
-
-    if ($extra.Count -eq 0) { return }
-
-    Write-Host ""
-    Write-Warn "Non-skill items found in $skillsDir\ (likely left by 'git subtree add'):"
-    $extra | ForEach-Object { Write-Warn "    $($_.Name)" }
-    Write-Host ""
-
-    $ans = Read-Host "  Remove them? [y/N]"
-    if ($ans -match '^[yY]') {
-        foreach ($item in $extra) {
-            $target = Join-Path $skillsDir $item.Name
-            if ($item.Type -eq 'dir') {
-                Remove-Item $target -Recurse -Force
-                Write-Ok "    Removed $target\"
-            } else {
-                Remove-Item $target -Force
-                Write-Ok "    Removed $target"
-            }
-        }
-    } else {
-        Write-Dim "Cleanup skipped."
-    }
-}
 
 # ── multi-select prompt ───────────────────────────────────────────────
 function Invoke-MultiSelect {
@@ -307,7 +265,7 @@ function Install-ClaudeCode {
     }
 
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
-    Copy-Item -Path "$WorkDir\repo\$Skill\*" -Destination $dest -Recurse -Force
+    Copy-Item -Path "$WorkDir\repo\skills\$Skill\*" -Destination $dest -Recurse -Force
     Write-Ok "Claude Code  ->  $dest\"
 
     if ($Scope -eq 'project') { Add-GitAttribute ".claude/skills/** linguist-vendored" }
@@ -327,7 +285,7 @@ function Install-Cursor {
     }
 
     New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-    $src  = "$WorkDir\repo\$Skill\SKILL.md"
+    $src  = "$WorkDir\repo\skills\$Skill\SKILL.md"
     $desc = Get-SkillDesc $src
     $body = Get-SkillBody $src
     Set-Content -Path $destFile -Value "---`ndescription: `"$desc`"`nglobs:`nalwaysApply: false`n---`n`n$body" -Encoding UTF8
@@ -343,7 +301,7 @@ function Install-Copilot {
     }
     $dest = ".github\copilot-instructions.md"
     New-Item -ItemType Directory -Path ".github" -Force | Out-Null
-    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Copilot      ->  $dest"
@@ -355,7 +313,7 @@ function Install-Gemini {
         New-Item -ItemType Directory -Path "$HOME\.gemini" -Force | Out-Null
         "$HOME\.gemini\GEMINI.md"
     } else { "GEMINI.md" }
-    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Gemini       ->  $dest"
@@ -364,7 +322,7 @@ function Install-Gemini {
 function Install-Windsurf {
     param([string]$Skill)
     $dest    = if ($Scope -eq 'user') { "$HOME\.windsurfrules" } else { ".windsurfrules" }
-    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Windsurf     ->  $dest"
@@ -376,7 +334,7 @@ function Install-Aider {
         Write-Warn "    Aider: no standard user-level location — installing at project level"
     }
     $dest    = "CONVENTIONS.md"
-    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
+    $body    = Get-SkillBody "$WorkDir\repo\skills\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
     Write-Ok "Aider        ->  $dest"
@@ -401,11 +359,6 @@ foreach ($skill in $ChosenSkills) {
         }
     }
     Write-Host ""
-}
-
-# ── post-install: clean leftover items from .claude\skills\ ──────────
-if (($ChosenAgents -contains 'claude-code') -and ($Scope -eq 'project')) {
-    Invoke-CleanupSkillsDir
 }
 
 Write-Ok "All done. Skills are ready to use."

@@ -51,7 +51,7 @@ git clone --depth=1 --quiet "$REPO_HTTPS" "$WORKDIR/repo" \
 
 # ── discover skills ───────────────────────────────────────────────────
 ALL_SKILLS=()
-for _d in "$WORKDIR/repo"/*/; do
+for _d in "$WORKDIR/repo"/skills/*/; do
   [ -f "${_d}SKILL.md" ] && ALL_SKILLS+=("$(basename "$_d")")
 done
 
@@ -126,47 +126,6 @@ add_gitattribute() {
   fi
 }
 
-# ── helper: remove non-skill items from .claude/skills/ ──────────────
-# Cleans up dirs/files left behind by `git subtree add`.
-cleanup_skills_dir() {
-  local skills_dir=".claude/skills"
-  [ -d "$skills_dir" ] || return 0
-
-  local extra=()
-  local _item _name
-
-  # Subdirectories that lack a SKILL.md are not skills
-  for _item in "$skills_dir"/*/; do
-    [ -d "$_item" ] || continue
-    _name=$(basename "$_item")
-    [ ! -f "$_item/SKILL.md" ] && extra+=("dir:$_name")
-  done
-
-  # Files at the root of the skills dir don't belong there
-  for _item in "$skills_dir"/*; do
-    [ -f "$_item" ] && extra+=("file:$(basename "$_item")")
-  done
-
-  [ "${#extra[@]}" -eq 0 ] && return 0
-
-  echo
-  warn "Non-skill items found in $skills_dir/ (likely left by 'git subtree add'):"
-  for _item in "${extra[@]}"; do warn "    ${_item#*:}"; done
-  echo
-  read -rp "  Remove them? [y/N]: " _ans < /dev/tty
-  case "$_ans" in
-    [yY]*)
-      for _item in "${extra[@]}"; do
-        _name="${_item#*:}"
-        case "$_item" in
-          dir:*)  rm -rf "$skills_dir/$_name"; ok "    Removed $skills_dir/$_name/" ;;
-          file:*) rm  -f "$skills_dir/$_name"; ok "    Removed $skills_dir/$_name"  ;;
-        esac
-      done
-      ;;
-    *) dim "    Cleanup skipped." ;;
-  esac
-}
 
 # ── multi-select prompt ───────────────────────────────────────────────
 # Sets global REPLY_INDICES array.
@@ -319,7 +278,7 @@ install_claude_code() {
   fi
 
   mkdir -p "$dest"
-  cp -r "$WORKDIR/repo/$skill/." "$dest/"
+  cp -r "$WORKDIR/repo/skills/$skill/." "$dest/"
   ok "Claude Code  →  $dest/"
 
   # Suppress language stat noise for vendored skill files
@@ -338,7 +297,7 @@ install_cursor() {
   fi
 
   mkdir -p "$dest"
-  local src="$WORKDIR/repo/$skill/SKILL.md"
+  local src="$WORKDIR/repo/skills/$skill/SKILL.md"
   {
     printf -- '---\n'
     printf 'description: "%s"\n' "$(skill_desc "$src")"
@@ -356,7 +315,7 @@ install_copilot() {
   [ "$SCOPE" = "user" ] && warn "    GitHub Copilot: no standard user-level location — installing at project level"
   local dest=".github/copilot-instructions.md"
   mkdir -p .github
-  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Copilot      →  $dest"
@@ -369,7 +328,7 @@ install_gemini() {
   else
     dest="GEMINI.md"
   fi
-  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Gemini       →  $dest"
@@ -378,7 +337,7 @@ install_gemini() {
 install_windsurf() {
   local skill="$1" dest
   [ "$SCOPE" = "user" ] && dest="$HOME/.windsurfrules" || dest=".windsurfrules"
-  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Windsurf     →  $dest"
@@ -388,7 +347,7 @@ install_aider() {
   local skill="$1"
   [ "$SCOPE" = "user" ] && warn "    Aider: no standard user-level location — installing at project level"
   local dest="CONVENTIONS.md"
-  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
+  local body; body=$(skill_body "$WORKDIR/repo/skills/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
   [ "$?" -eq 0 ] && ok "Aider        →  $dest"
@@ -414,10 +373,5 @@ for _skill in "${CHOSEN_SKILLS[@]}"; do
   done
   echo ""
 done
-
-# ── post-install: clean leftover items from .claude/skills/ ──────────
-_has_cc=0
-for _a in "${CHOSEN_AGENTS[@]}"; do [ "$_a" = "claude-code" ] && _has_cc=1 && break; done
-[ "$_has_cc" -eq 1 ] && [ "$SCOPE" = "project" ] && cleanup_skills_dir
 
 ok "All done. Skills are ready to use."

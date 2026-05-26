@@ -16,13 +16,14 @@
 
 ## Architecture in 30 seconds
 
-Each skill is a self-contained directory at the repo root. A `SKILL.md` defines the skill body (instructions, context, templates). Install scripts (`scripts/install.sh`, `scripts/install.ps1`) let consumers pull any skill into their own repo for any supported agent.
+Each skill is a self-contained directory under `skills/`. A `SKILL.md` defines the skill body (instructions, context, templates). Install scripts (`scripts/install.sh`, `scripts/install.ps1`) let consumers pull any skill into their own repo for any supported agent. A `skills-dist` branch (auto-published by CI on every push to `main`) exposes only the skill directories — no repo meta files — for clean `git subtree` consumption.
 
 ```
 ai-skills/
-├── <skill-name>/
-│   ├── SKILL.md               ← skill body (Claude Code reads this)
-│   └── templates/, reference/ ← supporting files (Claude Code-specific)
+├── skills/
+│   └── <skill-name>/
+│       ├── SKILL.md               ← skill body (Claude Code reads this)
+│       └── templates/, reference/ ← supporting files (Claude Code-specific)
 └── scripts/
     ├── install.sh             ← macOS/Linux interactive installer
     └── install.ps1            ← Windows PowerShell installer
@@ -77,7 +78,11 @@ make setup-hooks  # one-time: installs pre-commit hook
 ├── AGENTS.md                   # Codex/OpenAI adapter → docs/agents/
 ├── GEMINI.md                   # Gemini CLI adapter → docs/agents/
 ├── CONTRIBUTING.md             # Workflow + merge policy + commit conventions
-├── Makefile                    # make check, make setup-hooks
+├── Makefile                    # make check, make setup-hooks, make publish-dist
+├── skills/                     # All skill directories live here
+│   └── <skill-name>/
+│       ├── SKILL.md
+│       └── templates/, reference/
 ├── docs/
 │   ├── agents/                 # AGENT-CRITICAL: OVERVIEW.md, CONVENTIONS.md, STATUS.md
 │   ├── decisions/              # ADRs
@@ -86,10 +91,11 @@ make setup-hooks  # one-time: installs pre-commit hook
 │   ├── issues.md
 │   └── manual-testing.md
 ├── scripts/
+│   ├── install.sh              # macOS/Linux interactive installer
+│   ├── install.ps1             # Windows PowerShell installer
 │   └── setup-hooks.sh          # Installs pre-commit hook
-└── <skill-name>/               # One directory per skill
-    ├── SKILL.md
-    └── templates/, reference/
+└── .github/workflows/
+    └── publish-dist.yml        # Auto-publishes skills-dist branch on push to main
 ```
 
 *Update this tree as the project grows. Agents read it to navigate.*
