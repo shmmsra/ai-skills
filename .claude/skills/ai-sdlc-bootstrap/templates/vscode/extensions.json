@@ -1,0 +1,20 @@
+{
+  "// — {{PROJECT_NAME}} recommended extensions —": "When a contributor opens the repo for the first time, VS Code prompts them to install these. Keep this list short — only extensions that all contributors should have.",
+
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "github.vscode-pull-request-github",
+    "ms-vsliveshare.vsliveshare",
+    "streetsidesoftware.code-spell-checker"
+  ],
+
+  "// Add language-specific extensions only when the project uses that language": "",
+  "// TypeScript / Node":        "dbaeumer.vscode-eslint, esbenp.prettier-vscode",
+  "// Python":                   "ms-python.python, ms-python.vscode-pylance, charliermarsh.ruff",
+  "// Go":                       "golang.go",
+  "// Rust":                     "rust-lang.rust-analyzer, vadimcn.vscode-lldb",
+  "// C++":                      "ms-vscode.cpptools, ms-vscode.cmake-tools",
+  "// Java":                     "vscjava.vscode-java-pack",
+
+  "unwantedRecommendations": []
+}
