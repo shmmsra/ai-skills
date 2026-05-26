@@ -1,0 +1,102 @@
+# {{PROJECT_NAME}} — Project Overview
+
+> Canonical reference for project context, architecture, tech stack, and build commands.
+> Read before asking architecture questions or evaluating new libraries/frameworks.
+
+---
+
+## What is this project?
+
+**{{PROJECT_NAME}}** — {{PROJECT_DESCRIPTION}}
+
+**Owner**: {{PROJECT_OWNER}}
+**AI-first SDLC**: Designed to be built by humans and multiple AI agents across many sessions. Every significant decision and status change is committed to this repo so agents never need manual context transfer.
+
+---
+
+## Architecture in 30 seconds
+
+> *Replace this section with a 5-line ASCII diagram or short prose of how the major components fit together. Keep it tight — the goal is to orient an agent in 10 seconds.*
+
+```
+[your-architecture-here]
+```
+
+For the full architecture see [`docs/architecture.md`](../architecture.md) (create if non-trivial).
+
+---
+
+## Key decisions (quick reference)
+
+Full ADRs in [`docs/decisions/`](../decisions/). Read the ADR before changing anything related to that decision.
+
+| # | Decision | Short rationale |
+|---|----------|-----------------|
+| [ADR-001](../decisions/0001-adopt-ai-sdlc.md) | Adopt the ai-sdlc-bootstrap workflow | Plan-first, TDD-enforced, docs-as-done, multi-agent compatible |
+
+*Add new rows as ADRs accumulate.*
+
+---
+
+## Tech stack
+
+| Layer | Tech | Key files |
+|-------|------|-----------|
+| Language(s) | {{LANGUAGES_LIST}} | — |
+| Testing | {{TEST_FRAMEWORK}} | `{{TEST_DIRECTORY}}/` |
+| CI | {{CI_HOST}} | `.github/workflows/ci.yml` |
+| Build | {{BUILD_ENTRY_POINT}} | `Makefile` (or equivalent) |
+
+*Add rows for: framework(s), databases, external services, third-party API integrations, deploy target.*
+
+---
+
+## Build and run
+
+```bash
+{{CHECK_COMMAND}}   # pre-commit gate — run before every commit
+make setup-hooks    # one-time: installs pre-commit + post-commit hooks
+```
+
+**First-time setup**: see [`docs/dev-setup.md`](../dev-setup.md) for the full bootstrap (dependencies, tools, MCP servers, skills, language toolchains, environment variables). The dev-setup doc is the single source of truth for onboarding — if it's out of date, fix it in the same commit as whatever broke it.
+
+Credentials (if any): see `.env.example` for the required variables. **Never** commit `.env`.
+
+---
+
+## Repository layout
+
+```
+.
+├── README.md               # Project description + dev-setup pointer
+├── LICENSE                 # {{LICENSE_SPDX}}
+├── CODEOWNERS              # Default ownership
+├── .gitignore              # Language-aware ignores
+├── docs/                   # All project documentation
+│   ├── agents/             # AGENT-CRITICAL: OVERVIEW.md, CONVENTIONS.md, STATUS.md
+│   ├── decisions/          # ADRs
+│   ├── CHANGELOG.md
+│   ├── requirements.md
+│   ├── issues.md
+│   ├── manual-testing.md
+│   ├── dev-setup.md        # Onboarding: deps, tools, MCP, skills, hooks
+│   └── commit-log.md       # Append-only audit log: agent vs manual commits
+├── scripts/
+│   ├── setup-hooks.sh      # Installs pre-commit + post-commit
+│   └── agent-commit.sh     # Wrapper that adds the agent Co-Authored-By trailer
+├── CLAUDE.md / AGENTS.md / GEMINI.md / .cursor/rules/   # Agent entry points
+├── CONTRIBUTING.md         # Workflow + merge policy + commit tracking + hygiene
+├── Makefile                # `make check`, `make setup-hooks`
+├── .github/workflows/ci.yml
+└── src/ (or equivalent)
+```
+
+*Update this tree as the project grows. Agents read it to navigate.*
+
+---
+
+## Further reading
+
+External docs / wikis that were used to inform this scaffold (read these for deeper context):
+
+{{EXTERNAL_DOCS_LIST}}

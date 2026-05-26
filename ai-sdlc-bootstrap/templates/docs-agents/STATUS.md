@@ -1,0 +1,41 @@
+# {{PROJECT_NAME}} — Current Status & Backlog
+
+> Updated: {{TODAY}}
+> For the full feature history see [`docs/CHANGELOG.md`](../CHANGELOG.md).
+> For per-ticket detail see [`docs/issues.md`](../issues.md).
+> For the full phase breakdown see [`docs/requirements.md`](../requirements.md).
+
+---
+
+## Phase status
+
+| Phase | Status |
+|-------|--------|
+| 0 — Project bootstrap | ✅ Complete |
+| 1 — Initial implementation | 📋 Planned |
+
+*Update this table as phases progress. Use ✅ Complete / 🔄 In progress / 📋 Planned / 🚫 Blocked.*
+
+**Current test counts**: 0 tests; `{{CHECK_COMMAND}}` pre-commit gate active.
+
+---
+
+## What's next
+
+The next logical work, in priority order. Update at the end of every session.
+
+1. *(none yet — fresh scaffold; populate from `docs/issues.md` as tickets are added)*
+
+---
+
+## Recently closed
+
+| Date | Ticket | Summary | Commit |
+|------|--------|---------|--------|
+| {{TODAY}} | — | ai-sdlc-bootstrap scaffold | pending |
+
+---
+
+## Deferred — pull only when a specific need surfaces
+
+*Add tickets here when they're explicitly de-prioritized rather than open.*
