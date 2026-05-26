@@ -111,4 +111,77 @@ ls .claude/skills/
 
 ---
 
+---
+
+## Per-skill versioning (AISKL-003)
+
+### Scenario A — same-version no-op
+
+**Test command(s)**:
+```bash
+# Install the skill once, then run the installer again without --update
+bash /path/to/ai-skills/scripts/install.sh
+# select the same skill and claude-code agent again when prompted
+```
+
+**Setup**: Skill already installed at `.claude/skills/<name>/` with a `VERSION` file matching the source.
+
+**What to observe**: Second run does not overwrite files and prints a skip message.
+
+**Pass criteria**:
+- CLI prints `✓  <skill> v1.0.0 already installed — skipping  (pass --update to force)`
+- Files in `.claude/skills/<name>/` are unchanged (check mtime or diff)
+
+**Fail indicators**:
+- Files are overwritten silently
+- Script errors on missing `VERSION` file
+- Wrong version string shown
+
+---
+
+### Scenario B — version mismatch (old installed, new source)
+
+**Test command(s)**:
+```bash
+# Manually edit the installed VERSION to an older value, then re-run
+echo "0.9.0" > .claude/skills/<name>/VERSION
+bash /path/to/ai-skills/scripts/install.sh
+```
+
+**Setup**: Installed `VERSION` contains `0.9.0`; source `VERSION` contains `1.0.0`.
+
+**What to observe**: Installer detects the directory exists and warns, but does not silently overwrite.
+
+**Pass criteria**:
+- CLI prints `!  Already present — skipping  (use --update to overwrite)`
+- Files are NOT updated until `--update` is passed
+
+**Fail indicators**:
+- Files overwritten without `--update`
+- No warning shown
+
+---
+
+### Scenario C — `--update` force override
+
+**Test command(s)**:
+```bash
+bash /path/to/ai-skills/scripts/install.sh --update
+# or: UPDATE_MODE=1 bash /path/to/ai-skills/scripts/install.sh
+```
+
+**Setup**: Skill already installed at any version.
+
+**What to observe**: Installer overwrites files regardless of version match.
+
+**Pass criteria**:
+- Files in `.claude/skills/<name>/` are updated (new `VERSION` matches source)
+- CLI prints `✓  Claude Code  →  .claude/skills/<name>/`
+
+**Fail indicators**:
+- Skip message shown despite `--update`
+- `VERSION` file not updated
+
+---
+
 *Add new sections below this line as features land. Group by feature area (e.g. install, skill-body, templates).*

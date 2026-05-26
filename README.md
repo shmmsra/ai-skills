@@ -1,5 +1,7 @@
 # ai-skills
 
+[![Publish dist](https://github.com/shmmsra/ai-skills/actions/workflows/publish-dist.yml/badge.svg?branch=main)](https://github.com/shmmsra/ai-skills/actions/workflows/publish-dist.yml)
+
 A collection of reusable AI agent skills. Install them into any repo in seconds, for Claude Code, Cursor, GitHub Copilot, Gemini CLI, Windsurf, or Aider.
 
 ## Quick install
@@ -16,7 +18,7 @@ irm https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.ps1
 
 Both scripts are interactive — they ask which skills to install, whether to install at the project or user level, and which agents to target.
 
-**First run** installs skills; re-running detects what's already present and asks whether to update. To force-update without the prompt:
+Re-running the installer is safe — if the installed version already matches the source, the skill is skipped silently. To force-update regardless of version:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/shmmsra/ai-skills/main/scripts/install.sh | bash -s -- --update

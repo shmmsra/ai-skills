@@ -25,7 +25,7 @@
 
 The next logical work, in priority order. Update at the end of every session.
 
-1. AISKL-003 — add per-skill `VERSION` file; install becomes a no-op when version matches
+*No open tickets — backlog is clear.*
 
 ---
 
@@ -33,6 +33,7 @@ The next logical work, in priority order. Update at the end of every session.
 
 | Date | Ticket | Summary | Commit |
 |------|--------|---------|--------|
+| 2026-05-26 | AISKL-003 | Add per-skill VERSION + README; install no-op when version matches | pending |
 | 2026-05-26 | AISKL-002 | Move skills to skills/ + skills-dist CI branch | 24bda6c |
 | 2026-05-26 | — | ai-sdlc-bootstrap scaffold | 8cd82a8 |
 

@@ -273,7 +273,14 @@ install_claude_code() {
                         || dest=".claude/skills/$skill"
 
   if [ -d "$dest" ] && [ "$UPDATE_MODE" -eq 0 ]; then
-    warn "    Already present — skipping  (use --update to overwrite)"
+    local src_ver dest_ver
+    src_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "")
+    dest_ver=$(cat "$dest/VERSION" 2>/dev/null || echo "")
+    if [ -n "$src_ver" ] && [ "$src_ver" = "$dest_ver" ]; then
+      ok "    $skill v${src_ver} already installed — skipping  (pass --update to force)"
+    else
+      warn "    Already present — skipping  (use --update to overwrite)"
+    fi
     return 0
   fi
 

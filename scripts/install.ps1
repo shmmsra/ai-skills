@@ -260,7 +260,17 @@ function Install-ClaudeCode {
             else { ".claude\skills\$Skill" }
 
     if ((Test-Path $dest) -and -not $UpdateMode) {
-        Write-Warn "    Already present — skipping  (use -Update to overwrite)"
+        $srcVer  = if (Test-Path "$WorkDir\repo\$Skill\VERSION") {
+                       (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim()
+                   } else { "" }
+        $destVer = if (Test-Path "$dest\VERSION") {
+                       (Get-Content "$dest\VERSION" -Raw).Trim()
+                   } else { "" }
+        if ($srcVer -ne "" -and $srcVer -eq $destVer) {
+            Write-Ok "    $Skill v$srcVer already installed — skipping  (use -Update to force)"
+        } else {
+            Write-Warn "    Already present — skipping  (use -Update to overwrite)"
+        }
         return
     }
 
