@@ -79,8 +79,8 @@ Each skill should carry its own version number so install scripts can detect whe
 
 | Date | Ticket | Title | Commit |
 |------|--------|-------|--------|
-| 2026-05-26 | AISKL-002 | Move skills to skills/ + skills-dist CI branch | pending |
+| 2026-05-26 | AISKL-002 | Move skills to skills/ + skills-dist CI branch | 24bda6c |
 | 2026-05-26 | AISKL-001 | Scaffold placeholder — superseded by AISKL-002 and AISKL-003 | REJECTED |
-| 2026-05-26 | — | ai-sdlc-bootstrap scaffold | pending |
+| 2026-05-26 | — | ai-sdlc-bootstrap scaffold | 8cd82a8 |
 
 *When a ticket is closed: move it to this table, set the commit hash, and remove it from the Open section. Keep the last ~20 closures here; archive older ones to `docs/CHANGELOG.md`.*

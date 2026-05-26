@@ -33,7 +33,8 @@ The next logical work, in priority order. Update at the end of every session.
 
 | Date | Ticket | Summary | Commit |
 |------|--------|---------|--------|
-| 2026-05-26 | — | ai-sdlc-bootstrap scaffold | pending |
+| 2026-05-26 | AISKL-002 | Move skills to skills/ + skills-dist CI branch | 24bda6c |
+| 2026-05-26 | — | ai-sdlc-bootstrap scaffold | 8cd82a8 |
 
 ---
 
