@@ -7,3 +7,4 @@ tmp/
 *.swp
 *.swo
 .claude/settings.local.json
+mcp-server.log
