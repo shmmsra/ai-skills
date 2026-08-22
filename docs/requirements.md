@@ -21,7 +21,7 @@
 
 *Populate this section with the first chunk of real product work. Examples:*
 
-- [ ] New skill added via the full plan/approve/implement/test workflow
+- [x] New skill added via the full plan/approve/implement/test workflow (`vocal-ai`, AISKL-005)
 - [ ] Install scripts cover all agent targets reliably
 - [ ] First real ticket landed via the full AISKL-NNN convention
 

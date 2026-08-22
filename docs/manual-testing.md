@@ -260,4 +260,72 @@ grep -c "ai-sdlc-bootstrap" .gitattributes
 
 ---
 
+---
+
+## vocal-ai skill (AISKL-005)
+
+### Scenario A — first-time setup
+
+**Test command(s)**:
+```bash
+export VOCALAI_INSTALL_DIR="$HOME/.vocal-ai-test"
+curl -fsSL https://raw.githubusercontent.com/shmmsra/vocal-ai/main/scripts/install.sh | bash
+```
+
+**Setup**: `$VOCALAI_INSTALL_DIR` does not yet exist.
+
+**What to observe**: Binary and model files are downloaded; `.vocalai_version` and `models/MODELS_VERSION` are written under `$VOCALAI_INSTALL_DIR`.
+
+**Pass criteria**:
+- `test -x "$VOCALAI_INSTALL_DIR/vocalai"` succeeds
+- `ls "$VOCALAI_INSTALL_DIR/models"` shows the `.onnx` model files
+- `"$VOCALAI_INSTALL_DIR/vocalai" --text "test" --out /tmp/vocalai-check.wav --models-dir "$VOCALAI_INSTALL_DIR/models"` produces a non-empty WAV file
+
+**Fail indicators**:
+- Binary missing or not executable
+- Model directory empty or missing `.onnx` files
+- CLI invocation errors out or produces a zero-byte/invalid WAV
+
+---
+
+### Scenario B — re-running install is a no-op when current
+
+**Test command(s)**:
+```bash
+curl -fsSL https://raw.githubusercontent.com/shmmsra/vocal-ai/main/scripts/install.sh | bash
+```
+
+**Setup**: `$VOCALAI_INSTALL_DIR` already has the current binary + models from Scenario A.
+
+**What to observe**: Script detects matching `.vocalai_version` / `MODELS_VERSION` and skips downloading.
+
+**Pass criteria**: No re-download occurs (script reports already up to date); file mtimes under `$VOCALAI_INSTALL_DIR` are unchanged.
+
+**Fail indicators**: Binary/models are re-downloaded despite matching versions.
+
+---
+
+### Scenario C — speech generation
+
+**Test command(s)**:
+```bash
+"$VOCALAI_INSTALL_DIR/vocalai" --text "Let's walk through the dashboard." \
+  --out /tmp/narration-01.wav --models-dir "$VOCALAI_INSTALL_DIR/models"
+```
+
+**Setup**: `vocalai` already installed (Scenario A).
+
+**What to observe**: A WAV file is written at the `--out` path.
+
+**Pass criteria**:
+- Exit code 0
+- `/tmp/narration-01.wav` exists, is non-empty, and plays back as intelligible speech of the given text
+
+**Fail indicators**:
+- Non-zero exit code
+- Empty or corrupt WAV file
+- Audio doesn't match the input text
+
+---
+
 *Add new sections below this line as features land. Group by feature area (e.g. install, skill-body, templates).*

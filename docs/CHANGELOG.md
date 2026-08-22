@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-08-22 — AISKL-005: add vocal-ai skill
+
+**What changed**: Added `skills/vocal-ai/` (SKILL.md, VERSION, README.md, `reference/setup.md`) — a skill that generates speech from text via the local, offline `vocalai` CLI (Chatterbox TTS over ONNX), for use cases like demo-recording narration. The skill orchestrates the upstream `vocal-ai` repo's own `install.sh`/`install.ps1` for first-time setup and updates rather than duplicating that logic, and defaults the binary/model cache to `~/.vocal-ai` (via `VOCALAI_INSTALL_DIR`) so it's fetched once and reused across projects instead of per-repo.
+
+**Why**: The user wanted an agent-usable way to synthesize speech (e.g. voiceovers) without re-deriving the CLI's setup steps every session, and without silently duplicating an installer that vocal-ai already keeps idempotent and version-checked upstream.
+
+**What was rejected**: Vendoring a copy of `install.sh`'s logic inside this repo (would drift from upstream); an ADR (no new architectural pattern — follows the existing SKILL.md + VERSION + README + reference/ shape used by `book-companion`); per-project install location (re-downloads a multi-file model set per repo for no benefit).
+
+**What's next**: No open follow-up; pull the skill via the installer/subtree flow when needed in a consumer repo.
+
+---
+
 ## 2026-05-26 — AISKL-002: move skills to skills/ and add skills-dist CI
 
 **What changed**: Moved `ai-sdlc-bootstrap/` and `book-companion/` under a `skills/` subdirectory. Added a GitHub Actions workflow (`publish-dist.yml`) that splits `skills/` into a `skills-dist` branch on every push to `main`, giving git-subtree consumers a clean skills-only branch. Updated `scripts/install.sh` and `install.ps1` to discover and copy skills from `skills/<name>/`. Removed the now-unnecessary `cleanup_skills_dir` function from both scripts. Added `make publish-dist` target. Updated README, OVERVIEW.md, and manual-testing.md.
