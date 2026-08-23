@@ -40,6 +40,20 @@ If `missing`, follow `reference/setup.md` to install before generating anything.
 
 Less common tuning flags (leave at defaults unless the user asks): `--exaggeration`, `--cfg-weight`, `--temperature`, `--repetition-penalty`, `--min-p`, `--top-p`, `--max-new-tokens`.
 
+### Voice selection
+
+Reference voice clips for cloning live in `$VOCALAI_INSTALL_DIR/voices/*.wav` — a convention this skill defines, not something the installer populates. Before generating with a specific voice:
+
+```bash
+mkdir -p "$VOCALAI_INSTALL_DIR/voices"
+ls "$VOCALAI_INSTALL_DIR/voices"
+```
+
+- If the user already named a voice, resolve it to `$VOCALAI_INSTALL_DIR/voices/<name>.wav` and pass it via `--voice`.
+- If they didn't and the directory has files, list the names and ask which one to use (or offer the built-in default).
+- If the directory is empty, skip straight to the built-in default voice — no error, nothing to ask.
+- To add a new clonable voice, the user just drops a reference WAV into that folder; no install step needed.
+
 ### Text length
 
 Quality degrades past ~600 characters per `--text` call. For longer scripts, split into multiple calls at sentence/paragraph boundaries, generate separate WAV files, and concatenate them.
