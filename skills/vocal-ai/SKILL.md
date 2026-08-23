@@ -40,6 +40,10 @@ If `missing`, follow `reference/setup.md` to install before generating anything.
 
 Less common tuning flags (leave at defaults unless the user asks): `--exaggeration`, `--cfg-weight`, `--temperature`, `--repetition-penalty`, `--min-p`, `--top-p`, `--max-new-tokens`.
 
+### Text length
+
+Quality degrades past ~600 characters per `--text` call. For longer scripts, split into multiple calls at sentence/paragraph boundaries, generate separate WAV files, and concatenate them.
+
 ### Examples
 
 Narration for a demo recording, default voice:
