@@ -58,6 +58,10 @@ ls "$VOCALAI_INSTALL_DIR/voices"
 
 Quality degrades past ~600 characters per `--text` call. For longer scripts, split into multiple calls at sentence/paragraph boundaries, generate separate WAV files, and concatenate them.
 
+### Long-running generation
+
+A single `vocalai` run can take a while — longer text, CPU-only execution, or GPU cold start all add up — long enough to risk being cut off by a screen lock or dropped session if run as a blocking foreground call. Launch it as a background job instead (e.g. the Bash tool's `run_in_background`, or `nohup ... & disown` from a plain shell) and poll for the `--out` file's existence/mtime rather than waiting synchronously on it.
+
 ### Examples
 
 Narration for a demo recording, default voice:
