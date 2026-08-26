@@ -293,10 +293,10 @@ If you add a new dependency or tool while working in this repo, update `docs/dev
 
 ## 14. Related projects (multi-repo / monorepo)
 
-This project declares relationships with other projects in `project.deps.yaml` — either sub-projects inside this repo, or external repos it depends on. The split:
+This project declares relationships with other projects — either sub-projects inside this repo, or external repos it depends on — across two files with distinct roles:
 
-- **In-repo entries** (no `repo:` field) — just a path inside this checkout. Nothing to resolve.
-- **External entries** (`repo:` field present) — resolved to a machine-local path in `.project.lock.yaml`, which is **never committed** (it's device-specific).
+- **`project.deps.yaml`** (committed) — the raw input you hand-edit. In-repo entries (no `repo:` field) just declare a path inside this checkout; external entries (`repo:` field present) declare a git remote to depend on.
+- **`.project.lock.yaml`** (gitignored — never committed, it's device-specific) — **the source of truth agents should read**. Every related project, in-repo or external, fully resolved and flattened, including transitive ones (a related project's own further dependencies are walked too, recursively, regardless of whether a given hop is in-repo or external). Each entry carries its `kind`, resolved `local_path`, and its `notes`.
 
 ### Keeping the lock current
 
@@ -306,7 +306,7 @@ After adding, removing, or editing an entry in `project.deps.yaml`, run:
 make update-project-lock
 ```
 
-(or `scripts/update-project-lock.ps1` directly on Windows). This walks the dependency graph recursively, prompts for any unresolved local path (or offers to clone it), and detects cyclic dependencies.
+(or `scripts/update-project-lock.ps1` directly on Windows). This walks the full dependency graph recursively — in-repo and external hops alike — prompts for any unresolved local path (or offers to clone it), and detects cyclic dependencies.
 
 ### Two invocation modes
 

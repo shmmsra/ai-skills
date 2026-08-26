@@ -22,7 +22,7 @@ don't know about. Everything below exists to make that pointer reliable and low-
 - **Claude Code's own nested `CLAUDE.md` discovery** is narrower than full recursion — it loads
   root + the directory a session started from, not automatically every nested file as the
   agent touches other subtrees. Don't rely on implicit discovery alone; the explicit "Related
-  projects" table in `OVERVIEW.md` is there because agent behavior here is inconsistent across
+  projects" section in `OVERVIEW.md` is there because agent behavior here is inconsistent across
   tools.
 - **Cross-repo dependency resolution** has no single broadly-adopted standard across languages
   (closest analogs: Google's `repo` tool, Zephyr's `west`, ROS's `vcstool` — all
@@ -79,49 +79,79 @@ scripts won't.
 
 `.project.lock.yaml`, gitignored, entirely script-generated (never hand-edit; never let an
 agent hand-write it — always go through the script, even for the initial write, so the file's
-shape has exactly one source of truth). Only external (`repo:`-bearing) entries appear in it —
-in-repo entries have nothing to resolve.
+shape has exactly one source of truth). **This is the file agents should read** — `project.deps.yaml`
+is only the raw input. Both in-repo and external entries appear here, fully resolved and
+flattened, including transitive ones — a related project's own further dependencies (in-repo or
+external) are walked too, at any depth, in any mix:
 
 ```yaml
 resolved_at: 2026-08-26T10:00:00Z
 root: my-repo
 projects:
+  - name: pricing-engine
+    kind: in-repo
+    repo:
+    path: packages/pricing-engine
+    local_path: /Users/jane/dev/my-repo/packages/pricing-engine
+    notes: "Owns checkout pricing (aka 'PE'). Has its own AGENTS.md."
+    parent: root
+    depth: 1
   - name: widgets-core
+    kind: external
     repo: git@github.com:acme/widgets-core.git
     path: packages/core
     local_path: /Users/jane/dev/widgets-core
+    notes: "Upstream rules feed for the pricing engine."
     parent: root
     depth: 1
 ```
 
-`parent` and `depth` describe the resolved dependency tree (root repo → widgets-core → its own
-further dependencies, if it declares any).
+`kind` (`in-repo` / `external`) and `notes` are carried straight through from the manifest —
+`notes` is why the lock is agent-sufficient on its own, without needing to also open
+`project.deps.yaml`. `parent` and `depth` describe the resolved dependency tree (root repo →
+widgets-core → its own further dependencies, if it declares any, in-repo or external).
+
+For in-repo entries, `local_path` is always the absolute path (repo-root-relative `path` joined
+against whichever checkout declared it) — it isn't "resolved" the way an external entry is, but
+it's still machine-specific in absolute form, which is exactly why it belongs in the gitignored
+lock rather than the committed manifest.
 
 ## Resolution algorithm
 
-Depth-first traversal starting from the root repo's `projects:` list, restricted to
-`repo:`-bearing entries (in-repo entries are validated for path existence and otherwise
-skipped — they never enter the graph).
+Depth-first traversal starting from the root repo's `projects:` list. **Both entry kinds are
+graph nodes in the same walk** — an in-repo sub-project's own `project.deps.yaml` (if it has
+one) is walked exactly like an external dependency's, recursively, regardless of how many hops
+of either kind are mixed together.
 
-**Node identity**: `(normalized_repo, path)` — never the local filesystem path, since two
-different local checkouts of the same remote must collapse to one node. Normalization is
-best-effort string surgery (strip `.git` suffix, strip `git@`/`ssh://`/`https://`/`http://`/
-`git://` prefixes, turn `host:path` scp-syntax into `host/path`). This will not dedupe an
-`ssh://` and `https://` URL for the same repo if they don't happen to normalize to the same
-string — a known, accepted limitation given there's no ref-pinning or registry to lean on.
+**Node identity**:
+- External: `(normalized_repo, path)` — never the local filesystem path, since two different
+  local checkouts of the same remote must collapse to one node. Normalization is best-effort
+  string surgery (strip `.git` suffix, strip `git@`/`ssh://`/`https://`/`http://`/`git://`
+  prefixes, turn `host:path` scp-syntax into `host/path`). This will not dedupe an `ssh://` and
+  `https://` URL for the same repo if they don't happen to normalize to the same string — a
+  known, accepted limitation given there's no ref-pinning or registry to lean on.
+- In-repo: the resolved absolute `local_path` — computed by joining the declared `path` against
+  the *base directory of whichever manifest declared it* (the repo root at depth 1, or a
+  previously-resolved node's own checkout at deeper levels), not always the original repo root.
 
 **Traversal**:
-1. For each entry in the current manifest, resolve its local path (see below).
-2. If resolved and the node is not already visited: mark it "on stack," recurse into its own
-   `project.deps.yaml` if one exists at the resolved path (only its `repo:`-bearing entries),
-   then mark it "done" and pop it off the stack.
+1. For each entry, compute its identity key and resolve its local path (external: see priority
+   list below; in-repo: join `path` onto the current base directory — nothing can fail here,
+   the path is either there or it isn't).
+2. If not already visited: mark it "on stack," record it in the lock, recurse into its own
+   `project.deps.yaml` if one exists at the resolved path (passing that path down as the base
+   directory for any in-repo children it declares), then mark it "done" and pop it off the stack.
+   An in-repo entry whose declared path doesn't exist still gets recorded (with a warning) rather
+   than dropped — there's no "unresolved" state to represent for something the wrong side of a
+   typo, not a missing local checkout.
 3. **Cycle**: revisiting a node already "on stack" → abort immediately, print the full chain
    (`A -> B -> C -> A`), non-zero exit. No escape hatch — a cycle here is a modeling bug, not a
-   legitimate use case.
+   legitimate use case. This applies across kinds too (an in-repo entry pointing, transitively,
+   back to something already on the stack is still a cycle).
 4. **Diamond dependency**: revisiting a node already "done" (not on the current stack) → reuse
    the cached resolution, don't recurse into it again. This is fine and expected.
 
-**Local-path resolution priority** for each entry (first match wins):
+**Local-path resolution priority for external entries** (first match wins):
 1. `--set NAME=PATH` passed to the script (always wins — explicit override).
 2. An existing `.project.lock.yaml` entry for that name whose `local_path` still has a `.git`
    directory.
@@ -131,7 +161,9 @@ string — a known, accepted limitation given there's no ref-pinning or registry
 5. If stdin/stdout are a real TTY: prompt for a path interactively.
 6. If still unresolved and `--no-clone` was not passed: offer to clone (or auto-accept under
    `--yes`) into the conventional sibling path.
-7. Otherwise: unresolved. Hard error if `required: true`, warning if `false`.
+7. Otherwise: unresolved. Hard error if `required: true`, warning if `false`. (`required` has no
+   equivalent effect for in-repo entries — a missing in-repo path is always a warning, never a
+   hard failure.)
 
 ## Script invocation modes — this matters for agents specifically
 
@@ -157,8 +189,8 @@ read, in order, the first that exists at the resolved path:
 3. `<path>/README.md`.
 4. None found — proceed on judgment, and say so explicitly rather than silently guessing.
 
-For external entries, `<path>` is the `local_path` from `.project.lock.yaml`. For in-repo
-entries, `<path>` is simply `path` relative to this repo's root.
+`<path>` is the `local_path` from `.project.lock.yaml` — for both kinds now, since in-repo
+entries carry a resolved absolute `local_path` there too, not just external ones.
 
 ## Platform notes
 

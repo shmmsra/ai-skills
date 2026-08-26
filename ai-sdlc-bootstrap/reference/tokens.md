@@ -106,7 +106,10 @@ Used only inside `templates/Makefile` and `templates/ci-github-actions.yml`. Fil
 | Token | Source | Example |
 |-------|--------|---------|
 | `{{MULTI_REPO_ENABLED}}` | Interview Q17 | `yes` / `no` |
-| `{{RELATED_PROJECTS_BLOCK}}` | Derived from Round 6 answers | Markdown table: name, kind (in-repo/external), location, notes |
+
+`OVERVIEW.md`'s "Related projects" section is static prose (no table token) — it points at
+`.project.lock.yaml`, which the script generates with the actual per-entry detail (`kind`,
+`local_path`, `notes`) at resolution time, not at scaffold time from interview answers.
 
 When `{{MULTI_REPO_ENABLED}} == no`, none of the multi-repo files or template sections are written at all — this isn't a token substituted to an empty string, it's whole files/sections omitted. See `reference/multi-repo.md`.
 

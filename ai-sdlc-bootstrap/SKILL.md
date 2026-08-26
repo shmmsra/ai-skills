@@ -90,7 +90,7 @@ When approved:
    - **Collaboration contract**: `{{COAUTHOR_AGENT}}`, `{{COAUTHOR_NAME}}`, `{{COAUTHOR_EMAIL}}`, `{{COAUTHOR_LINE}}`, `{{MANUAL_COMMIT_REVIEW}}`, `{{MERGE_POLICY}}`, `{{MERGE_POLICY_BLOCK}}`
    - **Hygiene**: `{{SCAFFOLD_HYGIENE_FILES}}`, `{{LICENSE_SPDX}}`, `{{LICENSE_HOLDER}}`, `{{LICENSE_YEAR}}`, `{{IDE_TARGETS}}`
    - **Discovery**: `{{EXTERNAL_DOCS_LIST}}`
-   - **Related projects**: `{{MULTI_REPO_ENABLED}}`, `{{RELATED_PROJECTS_BLOCK}}`
+   - **Related projects**: `{{MULTI_REPO_ENABLED}}`
 
 2. **Order of writes** (do not parallelize — later files reference earlier ones):
    1. `docs/agents/{OVERVIEW,CONVENTIONS,STATUS}.md` (canonical rules — everything points here)

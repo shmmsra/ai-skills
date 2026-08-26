@@ -1,9 +1,14 @@
 <#
 .SYNOPSIS
-  ai-sdlc-bootstrap multi-repo engine v1.0 (Windows).
-  Resolves project.deps.yaml into .project.lock.yaml (gitignored, machine-local).
+  ai-sdlc-bootstrap multi-repo engine v2.0 (Windows).
+  Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
+  (gitignored, fully resolved — the source of truth agents should read).
   See scripts/update-project-lock.sh for macOS/Linux. Full design:
   reference/multi-repo.md in the ai-sdlc-bootstrap skill.
+
+  Both in-repo and external entries are graph nodes in the same recursive
+  walk: an in-repo sub-project's own project.deps.yaml (if it has one) is
+  walked exactly like an external dependency's, at any depth, in any mix.
 
 .PARAMETER Check
   Verify only — no prompting, no mutation. Exits non-zero if anything required
@@ -16,8 +21,10 @@
   Never offer/perform a clone; list what's missing instead.
 
 .PARAMETER Set
-  Pre-supply a local path for a dependency as "name=path" (repeatable). Always
-  wins over the lock file or the sibling-path guess.
+  Pre-supply a local path for an external dependency as "name=path"
+  (repeatable). Always wins over the lock file or the sibling-path guess.
+  Not applicable to in-repo entries (their path is always relative to a
+  known checkout).
 
 .NOTES
   Non-interactive (agent) usage: never invoke this and expect it to prompt —
@@ -80,8 +87,9 @@ foreach ($item in $Set) {
 #
 # Returns an array of hashtables built from whatever key/value pairs appear
 # under `projects:`. Handles both the manifest (name/path/repo/notes/required)
-# and the lock file (name/path/repo/local_path/parent/depth) — records simply
-# carry whichever keys were present; absent keys read back as $null.
+# and the lock file (name/kind/path/repo/local_path/notes/parent/depth) —
+# records simply carry whichever keys were present; absent keys read back as
+# $null via Get-Field's default.
 
 function Parse-ProjectList {
     param([string]$Path)
@@ -120,7 +128,7 @@ function Get-Field {
 $nameMatch = Select-String -Path $Manifest -Pattern '^name:\s*"?([^"]*)"?\s*$' | Select-Object -First 1
 $RootName = if ($nameMatch) { $nameMatch.Matches[0].Groups[1].Value } else { '' }
 
-# ─── load existing lock (best-effort local-path reuse) ──────────────────────
+# ─── load existing lock (best-effort local-path reuse for external entries) ─
 
 $ExistingLockPath = @{}
 if (Test-Path $LockFile) {
@@ -130,7 +138,7 @@ if (Test-Path $LockFile) {
     }
 }
 
-# ─── local-path resolution ───────────────────────────────────────────────────
+# ─── local-path resolution (external entries only) ───────────────────────────
 
 function Resolve-LocalPath {
     param([string]$Name, [string]$Repo)
@@ -175,7 +183,7 @@ function Resolve-LocalPath {
     return $candidate
 }
 
-# ─── DFS resolution with cycle detection ─────────────────────────────────────
+# ─── unified DFS resolution (in-repo + external) with cycle detection ────────
 
 function Normalize-Repo {
     param([string]$Repo)
@@ -191,11 +199,39 @@ $CycleChain = New-Object System.Collections.Generic.List[string]
 $LockEntries = New-Object System.Collections.Generic.List[hashtable]
 $FailedRequired = $false
 
+# Resolve-Node -Name -Repo -Path -Notes -Required -Parent -Depth -BaseDir
+#
+# -Repo empty  -> in-repo entry. -Path is resolved relative to -BaseDir (the
+#                 local_path of whichever manifest declared it — the repo
+#                 root at depth 1, or a previously-resolved node's checkout
+#                 at deeper levels). No resolution is possible to fail — the
+#                 path is either there or it isn't.
+# -Repo set    -> external entry. Resolved via Resolve-LocalPath exactly as
+#                 before; -BaseDir is irrelevant for it.
+#
+# Either kind, once resolved, is recorded in the lock and recursed into if it
+# has its own project.deps.yaml — the walk doesn't care which kind a node or
+# its children are.
 function Resolve-Node {
-    param([string]$Name, [string]$Repo, [string]$Path, [string]$Required, [string]$Parent, [int]$Depth)
+    param([string]$Name, [string]$Repo, [string]$Path, [string]$Notes, [string]$Required,
+          [string]$Parent, [int]$Depth, [string]$BaseDir)
 
-    $repoNorm = Normalize-Repo $Repo
-    $key = "$repoNorm|$Path"
+    $localPath = $null
+    if (-not $Repo) {
+        $kind = 'in-repo'
+        $joined = Join-Path $BaseDir $Path
+        if (Test-Path $joined) {
+            $localPath = (Resolve-Path $joined).Path
+        } else {
+            $localPath = $joined
+            Write-ErrLine "warning: in-repo project '$Name' declares path '$Path' which does not exist (looked under $BaseDir)"
+        }
+        $key = "inrepo|$localPath"
+    } else {
+        $kind = 'external'
+        $repoNorm = Normalize-Repo $Repo
+        $key = "ext|$repoNorm|$Path"
+    }
 
     if ($VisitedState[$key] -eq 'stack') {
         Write-ErrLine "error: cyclic dependency detected — $([string]::Join(' -> ', $CycleChain)) -> $Name"
@@ -206,18 +242,21 @@ function Resolve-Node {
     $VisitedState[$key] = 'stack'
     $CycleChain.Add($Name)
 
-    $localPath = Resolve-LocalPath -Name $Name -Repo $Repo
+    if ($kind -eq 'external') {
+        $localPath = Resolve-LocalPath -Name $Name -Repo $Repo
+    }
 
-    if ($localPath) {
-        $LockEntries.Add(@{ name = $Name; repo = $Repo; path = $Path; local_path = $localPath; parent = $Parent; depth = $Depth })
+    if ($kind -eq 'in-repo' -or $localPath) {
+        $LockEntries.Add(@{ name = $Name; kind = $kind; repo = $Repo; path = $Path; local_path = $localPath; notes = $Notes; parent = $Parent; depth = $Depth })
 
         $childManifest = Join-Path $localPath 'project.deps.yaml'
         if (Test-Path $childManifest) {
             foreach ($child in (Parse-ProjectList -Path $childManifest)) {
-                $cRepo = Get-Field $child 'repo'
-                if (-not $cRepo) { continue }
-                Resolve-Node -Name (Get-Field $child 'name') -Repo $cRepo -Path (Get-Field $child 'path') `
-                    -Required (Get-Field $child 'required' 'true') -Parent $Name -Depth ($Depth + 1)
+                $cName = Get-Field $child 'name'
+                if (-not $cName) { continue }
+                Resolve-Node -Name $cName -Repo (Get-Field $child 'repo') -Path (Get-Field $child 'path') `
+                    -Notes (Get-Field $child 'notes') -Required (Get-Field $child 'required' 'true') `
+                    -Parent $Name -Depth ($Depth + 1) -BaseDir $localPath
             }
         }
     } elseif ($Required -eq 'true') {
@@ -234,18 +273,9 @@ function Resolve-Node {
 foreach ($rec in (Parse-ProjectList -Path $Manifest)) {
     $name = Get-Field $rec 'name'
     if (-not $name) { continue }
-    $repo = Get-Field $rec 'repo'
-    $path = Get-Field $rec 'path'
-
-    if (-not $repo) {
-        $full = Join-Path $RepoRoot $path
-        if (-not (Test-Path $full)) {
-            Write-ErrLine "warning: in-repo project '$name' declares path '$path' which does not exist"
-        }
-        continue
-    }
-
-    Resolve-Node -Name $name -Repo $repo -Path $path -Required (Get-Field $rec 'required' 'true') -Parent 'root' -Depth 1
+    Resolve-Node -Name $name -Repo (Get-Field $rec 'repo') -Path (Get-Field $rec 'path') `
+        -Notes (Get-Field $rec 'notes') -Required (Get-Field $rec 'required' 'true') `
+        -Parent 'root' -Depth 1 -BaseDir $RepoRoot
 }
 
 if ($FailedRequired) { exit 1 }
@@ -270,9 +300,11 @@ $lines.Add("root: $RootName")
 $lines.Add('projects:')
 foreach ($e in $LockEntries) {
     $lines.Add("  - name: $($e.name)")
+    $lines.Add("    kind: $($e.kind)")
     $lines.Add("    repo: $($e.repo)")
     $lines.Add("    path: $($e.path)")
     $lines.Add("    local_path: $($e.local_path)")
+    $lines.Add("    notes: $($e.notes)")
     $lines.Add("    parent: $($e.parent)")
     $lines.Add("    depth: $($e.depth)")
 }
