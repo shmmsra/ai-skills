@@ -286,7 +286,8 @@ install_claude_code() {
 
   mkdir -p "$dest"
   cp -r "$WORKDIR/repo/$skill/." "$dest/"
-  ok "Claude Code  →  $dest/"
+  local skill_ver; skill_ver=$(cat "$dest/VERSION" 2>/dev/null || echo "unknown")
+  ok "Claude Code  →  $dest/  (v${skill_ver})"
 
   # Suppress language stat noise for vendored skill files (per-skill scope)
   [ "$SCOPE" = "project" ] && add_gitattribute ".claude/skills/$skill/** linguist-vendored"
@@ -312,7 +313,8 @@ install_cursor() {
     printf -- '---\n\n'
     skill_body "$src"
   } > "$dest_file"
-  ok "Cursor       →  $dest_file"
+  local skill_ver; skill_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "unknown")
+  ok "Cursor       →  $dest_file  (v${skill_ver})"
 
   add_gitattribute ".cursor/rules/$skill.mdc linguist-vendored"
 }
@@ -325,7 +327,9 @@ install_copilot() {
   local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
-  [ "$?" -eq 0 ] && ok "Copilot      →  $dest"
+  local _rc=$?
+  local skill_ver; skill_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "unknown")
+  [ "$_rc" -eq 0 ] && ok "Copilot      →  $dest  (v${skill_ver})"
 }
 
 install_gemini() {
@@ -338,7 +342,9 @@ install_gemini() {
   local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
-  [ "$?" -eq 0 ] && ok "Gemini       →  $dest"
+  local _rc=$?
+  local skill_ver; skill_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "unknown")
+  [ "$_rc" -eq 0 ] && ok "Gemini       →  $dest  (v${skill_ver})"
 }
 
 install_windsurf() {
@@ -347,7 +353,9 @@ install_windsurf() {
   local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
-  [ "$?" -eq 0 ] && ok "Windsurf     →  $dest"
+  local _rc=$?
+  local skill_ver; skill_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "unknown")
+  [ "$_rc" -eq 0 ] && ok "Windsurf     →  $dest  (v${skill_ver})"
 }
 
 install_aider() {
@@ -357,7 +365,9 @@ install_aider() {
   local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
   guarded_upsert "$dest" "$skill" \
     "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
-  [ "$?" -eq 0 ] && ok "Aider        →  $dest"
+  local _rc=$?
+  local skill_ver; skill_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "unknown")
+  [ "$_rc" -eq 0 ] && ok "Aider        →  $dest  (v${skill_ver})"
 }
 
 # ────────────────────────────────────────────────────────────────────

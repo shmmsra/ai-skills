@@ -276,7 +276,8 @@ function Install-ClaudeCode {
 
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
     Copy-Item -Path "$WorkDir\repo\$Skill\*" -Destination $dest -Recurse -Force
-    Write-Ok "Claude Code  ->  $dest\"
+    $skillVer = if (Test-Path "$dest\VERSION") { (Get-Content "$dest\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Claude Code  ->  $dest\  (v$skillVer)"
 
     if ($Scope -eq 'project') { Add-GitAttribute ".claude/skills/$Skill/** linguist-vendored" }
 }
@@ -299,7 +300,8 @@ function Install-Cursor {
     $desc = Get-SkillDesc $src
     $body = Get-SkillBody $src
     Set-Content -Path $destFile -Value "---`ndescription: `"$desc`"`nglobs:`nalwaysApply: false`n---`n`n$body" -Encoding UTF8
-    Write-Ok "Cursor       ->  $destFile"
+    $skillVer = if (Test-Path "$WorkDir\repo\$Skill\VERSION") { (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Cursor       ->  $destFile  (v$skillVer)"
 
     Add-GitAttribute ".cursor/rules/$Skill.mdc linguist-vendored"
 }
@@ -314,7 +316,8 @@ function Install-Copilot {
     $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
-    Write-Ok "Copilot      ->  $dest"
+    $skillVer = if (Test-Path "$WorkDir\repo\$Skill\VERSION") { (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Copilot      ->  $dest  (v$skillVer)"
 }
 
 function Install-Gemini {
@@ -326,7 +329,8 @@ function Install-Gemini {
     $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
-    Write-Ok "Gemini       ->  $dest"
+    $skillVer = if (Test-Path "$WorkDir\repo\$Skill\VERSION") { (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Gemini       ->  $dest  (v$skillVer)"
 }
 
 function Install-Windsurf {
@@ -335,7 +339,8 @@ function Install-Windsurf {
     $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
-    Write-Ok "Windsurf     ->  $dest"
+    $skillVer = if (Test-Path "$WorkDir\repo\$Skill\VERSION") { (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Windsurf     ->  $dest  (v$skillVer)"
 }
 
 function Install-Aider {
@@ -347,7 +352,8 @@ function Install-Aider {
     $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
     $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
     Invoke-GuardedUpsert $dest $Skill $content
-    Write-Ok "Aider        ->  $dest"
+    $skillVer = if (Test-Path "$WorkDir\repo\$Skill\VERSION") { (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Aider        ->  $dest  (v$skillVer)"
 }
 
 # ────────────────────────────────────────────────────────────────────
