@@ -26,7 +26,10 @@ Invoke when the user asks any of:
 - "Make this project agent-friendly"
 - "How do I run multiple AI agents on this codebase"
 
-If the repo already has the full `docs/agents/` triad plus matching agent-config files (`CLAUDE.md`, `AGENTS.md`, etc.) all pointing at it, do **not** re-scaffold — tell the user the setup is already in place and ask whether they want to update specific files instead.
+If the repo already has the full `docs/agents/` triad plus matching agent-config files (`CLAUDE.md`, `AGENTS.md`, etc.) all pointing at it, do **not** re-scaffold everything from scratch. Then:
+
+- **General re-invocation** ("set up AI SDLC" again, no specifics): tell the user setup is already in place and ask which specific area they want to add or update (hygiene files, ticket source, merge policy, related projects/multi-repo, etc.).
+- **Targeted request** (the user already named a specific area — e.g. "add project dependencies," "add multi-repo support," "set up a JIRA bridge," "add the CODEOWNERS file"): don't stop at a generic "already set up" message. Re-run Phase 1 (ASSESS) to refresh detection for that area — for related projects specifically, this means checking for `project.deps.yaml` per `reference/assessment.md` — then jump straight to the relevant part of Phase 2 (e.g. Round 6 for related projects, Round 4 for hygiene files) and proceed through Phases 3–4 for just that piece. A named request is enough signal to act on directly; don't make the user repeat themselves through a generic menu first.
 
 ---
 
