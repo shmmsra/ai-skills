@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 #
-# ai-sdlc-bootstrap multi-repo engine v1.0
+# ai-sdlc-bootstrap multi-repo engine v2.0
 #
-# Resolves project.deps.yaml into .project.lock.yaml (gitignored, machine-local).
+# Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
+# (gitignored, fully resolved — the source of truth agents should read).
 # Covers macOS and Linux. See scripts/update-project-lock.ps1 for Windows.
 # Full design: reference/multi-repo.md in the ai-sdlc-bootstrap skill.
+#
+# Both in-repo and external entries are graph nodes in the same recursive
+# walk: an in-repo sub-project's own project.deps.yaml (if it has one) is
+# walked exactly like an external dependency's, at any depth, in any mix.
 #
 # Usage:
 #   scripts/update-project-lock.sh [options]
 #
 # Options:
-#   --set NAME=PATH   Pre-supply a local path for a dependency (repeatable).
-#                      Always wins over the lock file or the sibling-path guess.
+#   --set NAME=PATH   Pre-supply a local path for an external dependency
+#                      (repeatable). Always wins over the lock file or the
+#                      sibling-path guess. Not applicable to in-repo entries
+#                      (their path is always relative to a known checkout).
 #   --yes, -y          Auto-accept clone offers using the conventional sibling path.
 #   --no-clone         Never offer/perform a clone; list what's missing instead.
 #   --check            Verify only — no prompting, no mutation. Exit non-zero if
@@ -40,7 +47,7 @@ PRESET_NAMES=()
 PRESET_VALUES=()
 
 usage() {
-  sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -117,18 +124,19 @@ map_set() {
 # Emits one line per record under `projects:`, fields joined by \x1f, in the
 # fixed order: name path repo notes required local_path parent depth.
 # Handles both the manifest (name/path/repo/notes/required) and the lock file
-# (name/path/repo/local_path/parent/depth) — unknown/absent fields stay empty.
+# (name/kind/path/repo/local_path/notes/parent/depth) — unknown/absent fields
+# stay empty.
 
 parse_project_list() {
   local file="$1"
   local in_list=0 have_record=0
-  local f_name="" f_path="" f_repo="" f_notes="" f_required="true" f_local_path="" f_parent="" f_depth=""
+  local f_name="" f_path="" f_repo="" f_notes="" f_required="true" f_local_path="" f_parent="" f_depth="" f_kind=""
 
   emit_record() {
     if [ "${have_record}" -eq 1 ]; then
-      printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\n' \
+      printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\n' \
         "${f_name}" "${f_path}" "${f_repo}" "${f_notes}" "${f_required}" \
-        "${f_local_path}" "${f_parent}" "${f_depth}"
+        "${f_local_path}" "${f_parent}" "${f_depth}" "${f_kind}"
     fi
   }
 
@@ -144,6 +152,7 @@ parse_project_list() {
       local_path) f_local_path="${val}" ;;
       parent) f_parent="${val}" ;;
       depth) f_depth="${val}" ;;
+      kind) f_kind="${val}" ;;
     esac
   }
 
@@ -156,7 +165,7 @@ parse_project_list() {
     [ "${in_list}" -eq 0 ] && continue
     if [[ "${line}" =~ ^[[:space:]]{2}-[[:space:]]+([a-zA-Z_]+):[[:space:]]*(.*)$ ]]; then
       emit_record
-      f_name="" f_path="" f_repo="" f_notes="" f_required="true" f_local_path="" f_parent="" f_depth=""
+      f_name="" f_path="" f_repo="" f_notes="" f_required="true" f_local_path="" f_parent="" f_depth="" f_kind=""
       have_record=1
       set_field "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
       continue
@@ -174,12 +183,12 @@ parse_project_list() {
 
 ROOT_NAME="$(sed -nE 's/^name:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/p' "${MANIFEST}" | head -n1)"
 
-# ─── load existing lock (best-effort local-path reuse) ─────────────────────
+# ─── load existing lock (best-effort local-path reuse for external entries) ─
 
 EXISTING_NAMES=()
 EXISTING_PATHS=()
 if [ -f "${LOCK_FILE}" ]; then
-  while IFS=$'\x1f' read -r name path repo notes required local_path parent depth; do
+  while IFS=$'\x1f' read -r name path repo notes required local_path parent depth kind; do
     if [ -n "${name}" ]; then
       EXISTING_NAMES+=("${name}")
       EXISTING_PATHS+=("${local_path}")
@@ -187,7 +196,7 @@ if [ -f "${LOCK_FILE}" ]; then
   done < <(parse_project_list "${LOCK_FILE}")
 fi
 
-# ─── local-path resolution ──────────────────────────────────────────────────
+# ─── local-path resolution (external entries only) ──────────────────────────
 
 resolve_local_path() {
   local name="$1" repo="$2"
@@ -238,16 +247,18 @@ resolve_local_path() {
   printf '%s' "${candidate}"
 }
 
-# ─── DFS resolution with cycle detection ────────────────────────────────────
+# ─── unified DFS resolution (in-repo + external) with cycle detection ───────
 
 NODE_KEYS=()
 NODE_STATES=()
 CYCLE_CHAIN=()
 LOCK_KEYS=()
 LOCK_NAMES=()
+LOCK_KINDS=()
 LOCK_REPOS=()
 LOCK_PATHS=()
 LOCK_LOCALPATHS=()
+LOCK_NOTES=()
 LOCK_PARENTS=()
 LOCK_DEPTHS=()
 
@@ -265,12 +276,41 @@ normalize_repo() {
 
 FAILED=0
 
+# resolve_node <name> <repo> <path> <notes> <required> <parent> <depth> <base_dir>
+#
+# <repo> empty  → in-repo entry. <path> is resolved relative to <base_dir>
+#                 (the local_path of whichever manifest declared it — the
+#                 repo root at depth 1, or a previously-resolved node's
+#                 checkout at deeper levels). No resolution is possible to
+#                 fail — the path is either there or it isn't.
+# <repo> set    → external entry. Resolved via resolve_local_path exactly as
+#                 before; <base_dir> is irrelevant for it.
+#
+# Either kind, once resolved, is recorded in the lock and recursed into if it
+# has its own project.deps.yaml — the walk doesn't care which kind a node or
+# its children are.
 resolve_node() {
-  local name="$1" repo="$2" path="$3" required="$4" parent="$5" depth="$6"
-  local repo_norm key state
-  repo_norm="$(normalize_repo "${repo}")"
-  key="${repo_norm}|${path}"
+  local name="$1" repo="$2" path="$3" notes="$4" required="$5" parent="$6" depth="$7" base_dir="$8"
+  local kind key local_path=""
 
+  if [ -z "${repo}" ]; then
+    kind="in-repo"
+    local joined="${base_dir%/}/${path}"
+    if [ -d "${joined}" ]; then
+      local_path="$(cd "${joined}" && pwd -P)"
+    else
+      local_path="${joined}"
+      echo "warning: in-repo project '${name}' declares path '${path}' which does not exist (looked under ${base_dir})" >&2
+    fi
+    key="inrepo|${local_path}"
+  else
+    kind="external"
+    local repo_norm
+    repo_norm="$(normalize_repo "${repo}")"
+    key="ext|${repo_norm}|${path}"
+  fi
+
+  local state
   if state="$(map_get "${key}" NODE_KEYS NODE_STATES)"; then
     if [ "${state}" = "stack" ]; then
       echo "error: cyclic dependency detected — ${CYCLE_CHAIN[*]} -> ${name}" >&2
@@ -284,23 +324,26 @@ resolve_node() {
   map_set "${key}" "stack" NODE_KEYS NODE_STATES
   CYCLE_CHAIN+=("${name}")
 
-  local local_path
-  local_path="$(resolve_local_path "${name}" "${repo}")"
+  if [ "${kind}" = "external" ]; then
+    local_path="$(resolve_local_path "${name}" "${repo}")"
+  fi
 
-  if [ -n "${local_path}" ]; then
+  if [ "${kind}" = "in-repo" ] || [ -n "${local_path}" ]; then
     LOCK_KEYS+=("${key}")
     LOCK_NAMES+=("${name}")
+    LOCK_KINDS+=("${kind}")
     LOCK_REPOS+=("${repo}")
     LOCK_PATHS+=("${path}")
     LOCK_LOCALPATHS+=("${local_path}")
+    LOCK_NOTES+=("${notes}")
     LOCK_PARENTS+=("${parent}")
     LOCK_DEPTHS+=("${depth}")
 
     local child_manifest="${local_path}/project.deps.yaml"
     if [ -f "${child_manifest}" ]; then
-      while IFS=$'\x1f' read -r c_name c_path c_repo c_notes c_required c_lp c_par c_dep; do
-        [ -z "${c_repo}" ] && continue
-        resolve_node "${c_name}" "${c_repo}" "${c_path}" "${c_required}" "${name}" "$((depth + 1))"
+      while IFS=$'\x1f' read -r c_name c_path c_repo c_notes c_required c_lp c_par c_dep c_kind; do
+        [ -z "${c_name}" ] && continue
+        resolve_node "${c_name}" "${c_repo}" "${c_path}" "${c_notes}" "${c_required}" "${name}" "$((depth + 1))" "${local_path}"
       done < <(parse_project_list "${child_manifest}")
     fi
   elif [ "${required}" = "true" ]; then
@@ -314,15 +357,9 @@ resolve_node() {
   unset "CYCLE_CHAIN[$((${#CYCLE_CHAIN[@]} - 1))]"
 }
 
-while IFS=$'\x1f' read -r name path repo notes required local_path parent depth; do
+while IFS=$'\x1f' read -r name path repo notes required local_path parent depth kind; do
   [ -z "${name}" ] && continue
-  if [ -z "${repo}" ]; then
-    if [ ! -e "${REPO_ROOT}/${path}" ]; then
-      echo "warning: in-repo project '${name}' declares path '${path}' which does not exist" >&2
-    fi
-    continue
-  fi
-  resolve_node "${name}" "${repo}" "${path}" "${required}" "root" 1
+  resolve_node "${name}" "${repo}" "${path}" "${notes}" "${required}" "root" 1 "${REPO_ROOT}"
 done < <(parse_project_list "${MANIFEST}")
 
 if [ "${FAILED}" -eq 1 ]; then
@@ -357,9 +394,11 @@ fi
   i=0
   for key in "${LOCK_KEYS[@]:-}"; do
     printf '  - name: %s\n' "${LOCK_NAMES[$i]}"
+    printf '    kind: %s\n' "${LOCK_KINDS[$i]}"
     printf '    repo: %s\n' "${LOCK_REPOS[$i]}"
     printf '    path: %s\n' "${LOCK_PATHS[$i]}"
     printf '    local_path: %s\n' "${LOCK_LOCALPATHS[$i]}"
+    printf '    notes: %s\n' "${LOCK_NOTES[$i]}"
     printf '    parent: %s\n' "${LOCK_PARENTS[$i]}"
     printf '    depth: %s\n' "${LOCK_DEPTHS[$i]}"
     i=$((i + 1))

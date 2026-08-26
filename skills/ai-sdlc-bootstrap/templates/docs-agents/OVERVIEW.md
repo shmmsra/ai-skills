@@ -28,17 +28,22 @@ For the full architecture see [`docs/architecture.md`](../architecture.md) (crea
 
 ## Related projects
 
-{{RELATED_PROJECTS_BLOCK}}
+This repo declares relationships with other projects — in-repo sub-projects and/or external repo
+dependencies. **`.project.lock.yaml`** (gitignored) is the source of truth to read: it holds every
+related project, in-repo or external, fully resolved and flattened (including transitive ones —
+a related project's own further dependencies are walked too), each with its `kind`, resolved
+`local_path`, and its `notes` (what it holds, acronyms, when to check it). **`project.deps.yaml`**
+(committed) is the raw input you hand-edit to add/remove/change a relationship — it is not
+guaranteed current on its own; if `.project.lock.yaml` is missing or looks stale relative to it,
+run `make update-project-lock` (or `scripts/update-project-lock.ps1` on Windows) first.
 
-**Before working on anything that touches a related project's domain** (per its notes above),
-read that project's own agent docs first — even if your tool doesn't auto-load them:
+**Before working on anything that touches a related project's domain** (per its `notes` in the
+lock), read that project's own agent docs first — even if your tool doesn't auto-load them:
 
-1. `<path>/docs/agents/OVERVIEW.md` (plus `CONVENTIONS.md`, `STATUS.md`) — if it was bootstrapped with ai-sdlc-bootstrap
-2. `<path>/AGENTS.md` or `<path>/CLAUDE.md`
-3. `<path>/README.md`
+1. `<local_path>/docs/agents/OVERVIEW.md` (plus `CONVENTIONS.md`, `STATUS.md`) — if it was bootstrapped with ai-sdlc-bootstrap
+2. `<local_path>/AGENTS.md` or `<local_path>/CLAUDE.md`
+3. `<local_path>/README.md`
 4. None found — proceed on judgment, and say so explicitly
-
-For external projects, `<path>` is the `local_path` resolved in `.project.lock.yaml` — run `make update-project-lock` if a project you need isn't listed there yet.
 
 ---
 
