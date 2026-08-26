@@ -33,6 +33,7 @@
 2. **`{{CHECK_COMMAND}}` must pass** before every commit.
 3. **No `--no-verify`** except for docs/housekeeping commits with zero code changes.
 4. **Documentation is part of done** — see `CONTRIBUTING.md §5` for the full list of docs to update per session.
+5. **Read before you edit; check callers before you change a signature** — Read a file before your first edit to it in a session, and re-read it if it may have changed since (e.g. after a pull, another agent's commit, or a generated/build step) — don't edit from a stale mental model. Before changing a function/method signature, exported symbol, or public API, search the codebase for every call site and update them in the same change.
 
 ---
 

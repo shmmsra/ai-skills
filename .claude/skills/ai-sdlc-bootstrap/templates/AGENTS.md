@@ -20,6 +20,7 @@
 - **Plan before you code**: For any non-trivial change, write out every file you will create/modify and why, state what you will NOT do, and wait for explicit human approval before writing any implementation code. Silence is not approval.
 - **`{{CHECK_COMMAND}}` must pass** before every commit.
 - **TDD is mandatory**: write tests before or alongside logic changes, in the same commit.
+- **Read before you edit**: read a file before your first edit to it in a session (re-read if it may have changed since), and grep for every call site before changing a function signature or public API.
 - **Docs are part of done**: update `docs/agents/STATUS.md`, `docs/CHANGELOG.md`, `docs/issues.md`, `docs/requirements.md`, and `docs/dev-setup.md` (if dependencies/tools changed) in the same commit.
 - **Commit via `scripts/agent-commit.sh`**: it adds the agent Co-Authored-By trailer (`{{COAUTHOR_LINE}}`) and lets the post-commit hook log the right author kind in `docs/commit-log.md`. Plain `git commit` will be logged as `manual`.
 - **Merge policy**: `{{MERGE_POLICY}}`. See `CONTRIBUTING.md §6`.
