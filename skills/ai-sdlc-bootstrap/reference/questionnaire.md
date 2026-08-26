@@ -158,6 +158,36 @@ If you collected enough hints during the Discover phase to draft these yourself,
 
 ---
 
+## Round 6 (optional) — related projects (multi-repo / monorepo)
+
+Fully optional — most repos skip this entirely. Read `reference/multi-repo.md` for the full design before running this round.
+
+**Gating** (decide before asking anything):
+- If assessment found `project.deps.yaml` already present → skip the yes/no. Summarize the existing entries back to the user and ask: *"This repo already declares related projects: `<name>` (in-repo / external), ... Add, remove, or edit any, or keep as-is?"*
+- Otherwise, ask a single-select question, **default No**:
+
+**Question 17: Related projects** (single-select, default No)
+- *"Does this repo have relationships with other projects that agents should be aware of — either sub-projects inside this repo (monorepo), or external repos you develop against?"*
+- Options:
+  - `No — this repo is self-contained` (Recommended)
+  - `Yes — let's declare them`
+- If No: write nothing. `{{MULTI_REPO_ENABLED}} = no`. Skip the rest of this round entirely — no `project.deps.yaml`, no scripts, no OVERVIEW.md section, no CONTRIBUTING §14, no adapter-file lines.
+
+**If Yes**, set `{{MULTI_REPO_ENABLED}} = yes` and, for each related project the user describes, gather:
+
+- **Name** — free text, used as the unique key.
+- **Kind** — single-select: `In-repo (sub-project of this monorepo)` or `External (a different git repository)`.
+  - If **in-repo**: ask for the `path` (relative to this repo's root). Then ask, per-file consent: *"Should I scaffold a nested `AGENTS.md` at `<path>` now, so agents working there get scoped instructions? (This is the standard nested-AGENTS.md mechanism — the nearest file wins.)"* Default: offer, let the user decline per entry.
+  - If **external**: ask for the `repo` (git remote URL) and, optionally, a `path` if the dependency is itself a monorepo and only one package inside it matters here. Then ask for the local path: *"Where is `<name>` checked out locally on this machine? Leave blank if you don't have it yet or want me to clone it."* If blank, ask: *"Clone `<repo>` into the sibling directory `../<name>`?"*
+- **Notes** — free text, always ask: *"In a sentence or two, what does `<name>` hold, and when should an agent working here go read its docs? (Any acronyms are worth mentioning here too.)"* This is the field that makes cross-project awareness actually work — don't let the user skip it with something empty.
+- **Required** — default `true`; ask only if the user signals a dependency is optional/best-effort.
+
+Repeat for each additional related project (`AskUserQuestion` supports up to 4 per call — batch where sensible, don't turn this into an interrogation for a long list).
+
+After the round: for every external entry where a local path was given or a clone was accepted, note it — Phase 4 (SCAFFOLD) will write `project.deps.yaml` from these answers and then invoke `scripts/update-project-lock.sh --set name=path ... --yes` (never hand-write `.project.lock.yaml` — the script is the only thing that writes it, even for the very first resolution).
+
+---
+
 ## Tokens populated by interview
 
 After all rounds, you should have values for:
@@ -191,6 +221,10 @@ After all rounds, you should have values for:
 
 **Discovery (Phase 1.5 — new)**
 - `{{EXTERNAL_DOCS_LIST}}` — bulleted list of URLs / file paths read during Discover; included in `OVERVIEW.md` "Further reading" section
+
+**Related projects (Round 6 — optional)**
+- `{{MULTI_REPO_ENABLED}}` — `yes`/`no`. When `no`, skip `project.deps.yaml`, both scripts, the `OVERVIEW.md` "Related projects" section, `CONTRIBUTING.md §14`, the `CONVENTIONS.md` sub-section, the adapter-file lines, the `Makefile` target, and the `.gitignore` line — none of it is written.
+- `{{RELATED_PROJECTS_BLOCK}}` — rendered markdown table (name / kind / location / notes) for `OVERVIEW.md`, derived from the per-entry answers above
 
 If any token is missing after the rounds, ask — don't guess and don't leave `{{TOKENS}}` in the written files.
 

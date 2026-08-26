@@ -39,6 +39,7 @@ Run the assessment commands in `reference/assessment.md` to classify the target 
 - Commit history, file count, language detection (existing)
 - Test framework + CI presence (existing)
 - **Repository hygiene inventory** (new) — README, LICENSE, CODEOWNERS, .gitignore, IDE configs, dev-setup doc
+- **Multi-repo signal** — presence of `project.deps.yaml` (see `reference/multi-repo.md`); if present, Round 6 of the interview skips its yes/no and goes straight to add/edit/remove
 
 State your classification to the user in one short paragraph, including which hygiene files are present vs missing.
 
@@ -61,6 +62,7 @@ Read **`reference/questionnaire.md`** for the full branching question bank, now 
 - **Round 3 (new)** — collaboration contract: co-author trailers, manual-commit review policy, merge policy (direct vs PR), manual-test requirement
 - **Round 4 (new)** — repo hygiene: README / LICENSE / CODEOWNERS / .gitignore / dev-setup / IDE configs (only ask about the ones missing)
 - **Round 5 (optional)** — domain hard constraints (skip if Discover surfaced them already)
+- **Round 6 (optional, new)** — related projects (multi-repo/monorepo): default No, skip entirely unless the user opts in or `project.deps.yaml` already exists
 
 Use `AskUserQuestion` (≤ 4 questions per call). Skip rounds whose answers are obvious from assessment or discovery. Don't make this an interrogation.
 
@@ -85,6 +87,7 @@ When approved:
    - **Collaboration contract**: `{{COAUTHOR_AGENT}}`, `{{COAUTHOR_NAME}}`, `{{COAUTHOR_EMAIL}}`, `{{COAUTHOR_LINE}}`, `{{MANUAL_COMMIT_REVIEW}}`, `{{MERGE_POLICY}}`, `{{MERGE_POLICY_BLOCK}}`
    - **Hygiene**: `{{SCAFFOLD_HYGIENE_FILES}}`, `{{LICENSE_SPDX}}`, `{{LICENSE_HOLDER}}`, `{{LICENSE_YEAR}}`, `{{IDE_TARGETS}}`
    - **Discovery**: `{{EXTERNAL_DOCS_LIST}}`
+   - **Related projects**: `{{MULTI_REPO_ENABLED}}`, `{{RELATED_PROJECTS_BLOCK}}`
 
 2. **Order of writes** (do not parallelize — later files reference earlier ones):
    1. `docs/agents/{OVERVIEW,CONVENTIONS,STATUS}.md` (canonical rules — everything points here)
@@ -98,8 +101,9 @@ When approved:
    9. `Makefile` (only if user accepted; otherwise emit `scripts/check.sh`)
    10. `scripts/setup-hooks.sh` (now installs **both** pre-commit and post-commit hooks)
    11. **`scripts/agent-commit.sh`** (if `{{COAUTHOR_AGENT}} == yes`) — helper that adds the agent's Co-Authored-By trailer
-   12. `.github/workflows/ci.yml` (only if user picked GitHub Actions)
-   13. **Hygiene files** (only those selected in Q13):
+   12. **`project.deps.yaml` + `scripts/update-project-lock.sh` + `scripts/update-project-lock.ps1`** (only if `{{MULTI_REPO_ENABLED}} == yes`) — written from the Round 6 answers; the initial `.project.lock.yaml` is produced afterward by invoking the script (see step 4 below), never hand-written
+   13. `.github/workflows/ci.yml` (only if user picked GitHub Actions)
+   14. **Hygiene files** (only those selected in Q13):
        - `README.md` (new or appended)
        - `LICENSE` (resolved from `{{LICENSE_SPDX}}`: `templates/LICENSE-MIT.txt`, `templates/LICENSE-APACHE-2.0.txt`, or proprietary stub)
        - `CODEOWNERS`
@@ -107,7 +111,7 @@ When approved:
        - `.editorconfig`
        - `.vscode/settings.json` + `.vscode/extensions.json` (if VS Code in `{{IDE_TARGETS}}`)
        - `.zed/settings.json` (if Zed in `{{IDE_TARGETS}}`)
-   14. `.claude/memory/MEMORY.md` (Claude-only; seed with user role + project goal placeholders, plus any reference memories drafted from Discover)
+   15. `.claude/memory/MEMORY.md` (Claude-only; seed with user role + project goal placeholders, plus any reference memories drafted from Discover)
 
 3. **For existing projects**: never overwrite a file silently.
    - If `CONTRIBUTING.md` exists → propose a merge (append an `## AI Agent Workflow` section pointing to `docs/agents/`). Show the diff before writing.
@@ -115,6 +119,7 @@ When approved:
    - If `README.md` exists → propose appending only a `## AI-Driven SDLC` section linking to CONTRIBUTING and dev-setup. Never rewrite the existing content.
    - If `.gitignore` exists → append only entries not already present (see `reference/language-presets.md`).
    - If an existing agent-config file looks improvable (stale, missing key sections), **you may propose a rewrite** — but only after listing the specific gaps and getting per-file consent in the plan step.
+   - If `project.deps.yaml` exists → always rewrite both `scripts/update-project-lock.{sh,ps1}` from the current template (propagates engine fixes) even if the manifest itself doesn't change; show the diff either way. See `reference/multi-repo.md`.
 
 4. After writing, run:
    ```bash
@@ -122,6 +127,8 @@ When approved:
    make check         # baseline — may fail; that's the starting test count
    ```
    Report the result. If `make check` fails because there are no tests yet, that's expected for a green-field project — say so.
+
+   If `{{MULTI_REPO_ENABLED}} == yes`, also produce the initial `.project.lock.yaml` now by invoking the script non-interactively with the local paths gathered in Round 6 — e.g. `bash scripts/update-project-lock.sh --set widgets-core=/path/from/interview --yes`. Never hand-write `.project.lock.yaml`; the script is the only thing that writes it, including this first time.
 
 5. **Do not commit.** Per the workflow you just installed, the human approves the commit. Show the diff summary, list files written, and wait.
 
@@ -137,6 +144,7 @@ When approved:
 | Exhaustive token reference for substitution | `reference/tokens.md` |
 | How `.claude/memory/` works + recommended seed entries (including memories drafted from Discover) | `reference/memory-and-context.md` |
 | Per-language detection, Makefile snippets, sample test stub, `.gitignore` blocks | `reference/language-presets.md` |
+| Related-projects design: schema, resolution algorithm, cycle detection, script flags, platform notes | `reference/multi-repo.md` |
 
 ## Template index
 
@@ -174,6 +182,9 @@ Templates live in `templates/`. Always read the template right before writing th
 | `.gitignore` | `templates/gitignore.template` (plus per-language blocks from `reference/language-presets.md`) |
 | `.vscode/settings.json` | `templates/vscode/settings.json` |
 | `.vscode/extensions.json` | `templates/vscode/extensions.json` |
+| `project.deps.yaml` (only if `{{MULTI_REPO_ENABLED}} == yes`) | `templates/project.deps.yaml` |
+| `scripts/update-project-lock.sh` (only if `{{MULTI_REPO_ENABLED}} == yes`) | `templates/scripts/update-project-lock.sh` |
+| `scripts/update-project-lock.ps1` (only if `{{MULTI_REPO_ENABLED}} == yes`) | `templates/scripts/update-project-lock.ps1` |
 
 ---
 
@@ -187,6 +198,7 @@ Templates live in `templates/`. Always read the template right before writing th
 6. **The skill is agent-agnostic.** Do not encode Claude-specific assumptions into shared templates. Claude-specific bits go only in `CLAUDE.md`, `.claude/memory/`.
 7. **The skill is project-agnostic.** Never copy domain-specific terms from any reference project into the target. Every project-specific value comes from the interview, not from templates or examples baked into this skill.
 8. **The commit-tracking system is opt-in.** If the user picks `convention-only` in Q10, do *not* install the post-commit hook or scaffold `docs/commit-log.md`.
+9. **Related-projects support is opt-in.** Never write `project.deps.yaml`, the two lock-resolution scripts, or any of the associated doc sections unless Round 6 was explicitly accepted (or `project.deps.yaml` already existed). Never hand-write `.project.lock.yaml` — only the script writes it, even the first time.
 
 ---
 
@@ -213,8 +225,11 @@ After scaffolding, the target repo should have this structure (the new bits are 
 │   └── decisions/                                             # ADR archive
 ├── scripts/
 │   ├── setup-hooks.sh                                         # installs pre-commit + post-commit
-│   └── agent-commit.sh                                        # new — adds Co-Authored-By trailer
-├── Makefile                                                   # make check + make setup-hooks
+│   ├── agent-commit.sh                                        # new — adds Co-Authored-By trailer
+│   └── update-project-lock.sh / .ps1                          # new — only if related projects declared
+├── project.deps.yaml                                          # new — only if related projects declared
+├── .project.lock.yaml                                         # new, gitignored — only if related projects declared
+├── Makefile                                                   # make check + make setup-hooks (+ make update-project-lock)
 └── .github/workflows/ci.yml                                   # mirrors make check
 ```
 

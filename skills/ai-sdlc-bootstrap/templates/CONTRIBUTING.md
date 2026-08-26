@@ -270,6 +270,7 @@ The following files are part of the project's contract with both humans and agen
 | `.vscode/`, `.zed/`, etc. | When adding a recommended extension, snippet, or workspace setting that benefits all contributors. |
 | `docs/dev-setup.md` | When adding a new dependency, MCP server, skill, language toolchain, or required tool. The reproducibility of onboarding depends on this. |
 | `docs/decisions/` | When making an architectural decision another agent might wonder about. See ADR template. |
+| `project.deps.yaml` | When adding, removing, or renaming a related project. Run `make update-project-lock` after editing — see §14. |
 
 Stale hygiene files are a documented failure mode of multi-agent SDLCs. Don't let them rot.
 
@@ -287,3 +288,31 @@ New contributors (human or agent) bootstrap their environment by following **[`d
 - The first-time `{{CHECK_COMMAND}}` baseline run
 
 If you add a new dependency or tool while working in this repo, update `docs/dev-setup.md` in the same commit. Onboarding the next agent on a fresh clone is the regression test for this file.
+
+---
+
+## 14. Related projects (multi-repo / monorepo)
+
+This project declares relationships with other projects in `project.deps.yaml` — either sub-projects inside this repo, or external repos it depends on. The split:
+
+- **In-repo entries** (no `repo:` field) — just a path inside this checkout. Nothing to resolve.
+- **External entries** (`repo:` field present) — resolved to a machine-local path in `.project.lock.yaml`, which is **never committed** (it's device-specific).
+
+### Keeping the lock current
+
+After adding, removing, or editing an entry in `project.deps.yaml`, run:
+
+```bash
+make update-project-lock
+```
+
+(or `scripts/update-project-lock.ps1` directly on Windows). This walks the dependency graph recursively, prompts for any unresolved local path (or offers to clone it), and detects cyclic dependencies.
+
+### Two invocation modes
+
+- **Interactive** (a human runs it directly): prompts on the terminal for any missing local path, asks before cloning.
+- **Non-interactive** (an agent runs it via a shell tool call): never blocks on stdin. If the agent needs a new project's local path, it asks the human first, then re-runs the script with `--set <name>=<path>`. Use `--yes` to accept clone defaults and `--no-clone` to fail-list instead of cloning. Use `--check` to verify resolution without prompting or mutating anything.
+
+### Cross-project awareness when working here
+
+Before making a change that touches a related project's domain, read that project's own agent docs first. See `docs/agents/OVERVIEW.md` § Related projects for the full list and the fallback order for finding its docs.

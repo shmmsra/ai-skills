@@ -119,6 +119,11 @@ grep -l 'install\|setup\|getting started' README.md 2>/dev/null         # may al
 
 # Existing commit-log or audit trail (rare but check)
 ls docs/commit-log.md AUDIT.md 2>/dev/null
+
+# Existing multi-repo / monorepo config — presence is a direct signal that this
+# repo already has related projects tracked (see reference/multi-repo.md);
+# skip the initial yes/no in interview Round 6 and go straight to add/edit/remove.
+ls project.deps.yaml 2>/dev/null
 ```
 
 ## Hygiene-file inventory (drives interview Round 3)

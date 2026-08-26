@@ -24,6 +24,7 @@ Read these files before starting any work in this repository:
 - **Commit via `scripts/agent-commit.sh`**: it adds the agent trailer (`{{COAUTHOR_LINE}}`) so the post-commit hook logs the commit as agent-authored.
 - **Merge policy**: `{{MERGE_POLICY}}`. Before any push/merge, review every `manual` commit in the range (`docs/commit-log.md` lists them).
 - **Hygiene**: keep `README.md`, `.gitignore`, `CODEOWNERS`, and IDE configs current — see `CONTRIBUTING.md §12`.
+- **Related projects**: before touching a related project's domain, read that project's own agent docs first — see `docs/agents/OVERVIEW.md` § Related projects and `CONTRIBUTING.md §14`.
 
 ---
 

@@ -59,6 +59,10 @@ This project enforces `{{MERGE_POLICY}}`. See `CONTRIBUTING.md §6` for the exac
 
 {{MERGE_POLICY_BLOCK}}
 
+### Related projects
+
+This repo declares relationships with other projects — see [`docs/agents/OVERVIEW.md`](docs/agents/OVERVIEW.md) § Related projects. Before working on anything that touches a related project's domain, read that project's own agent docs first, even if not auto-loaded. See `CONTRIBUTING.md §14`.
+
 ---
 
 ## 1. Hard constraints (every agent must respect these)
