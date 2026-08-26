@@ -49,6 +49,10 @@
 
 {{DOMAIN_RULES_BLOCK}}
 
+### Related-project awareness
+
+- Before making a change that touches a related project's domain (see `docs/agents/OVERVIEW.md` § Related projects), read that project's own agent docs first — don't assume behavior you haven't verified.
+
 ---
 
 ## 4. Approval-gated operations
@@ -96,5 +100,6 @@ These files are project artefacts, not metadata. **Keep them current.** Updating
 | `.vscode/`, `.zed/`, IDE configs | New recommended extension or workspace setting |
 | `docs/dev-setup.md` | **New dependency, MCP, skill, language toolchain, or required tool** — onboarding will break otherwise |
 | `docs/decisions/` | Architectural choice another agent might wonder about |
+| `project.deps.yaml` | Adding, removing, or renaming a related project. Run `make update-project-lock` after editing. |
 
 See `CONTRIBUTING.md §12` for the full policy.

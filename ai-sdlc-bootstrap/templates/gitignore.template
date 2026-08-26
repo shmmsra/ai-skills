@@ -37,6 +37,10 @@ secrets/
 # For larger teams where preferences diverge per person, uncomment:
 # .claude/memory/
 
+# Only add the line below if project.deps.yaml was scaffolded (related-projects
+# feature) — .project.lock.yaml holds machine-local paths and must never be committed.
+.project.lock.yaml
+
 # ── Language-specific blocks ─────────────────────────────────────────────────
 # (The scaffold inserts the right blocks here based on detected languages.
 #  See reference/language-presets.md.)

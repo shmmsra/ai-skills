@@ -1,4 +1,4 @@
-.PHONY: check setup-hooks test typecheck lint build clean help
+.PHONY: check setup-hooks test typecheck lint build clean help update-project-lock
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 
@@ -11,6 +11,7 @@ help:
 	@echo "  make lint          Run the linter only"
 	@echo "  make build         Build the project"
 	@echo "  make clean         Remove build artifacts"
+	@echo "  make update-project-lock   Resolve project.deps.yaml -> .project.lock.yaml"
 
 # ── Pre-commit gate ──────────────────────────────────────────────────────────
 
@@ -28,6 +29,13 @@ check: {{CHECK_TARGETS}}
 
 setup-hooks:
 	bash scripts/setup-hooks.sh
+
+# ── Related projects ──────────────────────────────────────────────────────────
+#
+# Windows users without `make` run scripts/update-project-lock.ps1 directly.
+
+update-project-lock:
+	bash scripts/update-project-lock.sh
 
 # ── Language-specific targets ─────────────────────────────────────────────────
 #

@@ -101,6 +101,15 @@ Used only inside `templates/Makefile` and `templates/ci-github-actions.yml`. Fil
 |-------|--------|---------|
 | `{{EXTERNAL_DOCS_LIST}}` | Discover phase | Bulleted markdown list of URLs/paths read for context, with one-line purpose each |
 
+## Related-projects tokens (Round 6 — optional)
+
+| Token | Source | Example |
+|-------|--------|---------|
+| `{{MULTI_REPO_ENABLED}}` | Interview Q17 | `yes` / `no` |
+| `{{RELATED_PROJECTS_BLOCK}}` | Derived from Round 6 answers | Markdown table: name, kind (in-repo/external), location, notes |
+
+When `{{MULTI_REPO_ENABLED}} == no`, none of the multi-repo files or template sections are written at all — this isn't a token substituted to an empty string, it's whole files/sections omitted. See `reference/multi-repo.md`.
+
 ## Substitution algorithm
 
 ```

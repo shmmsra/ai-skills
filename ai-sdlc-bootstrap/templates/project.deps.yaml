@@ -1,0 +1,37 @@
+# project.deps.yaml — declares related projects this repo works alongside.
+#
+# Two kinds of entries, distinguished by whether `repo:` is present:
+#
+#   - In-repo project (no `repo:`): a sub-project inside THIS repository.
+#     `path` is relative to this repo's root. Nothing to resolve — the path is
+#     always valid in the checked-out tree.
+#
+#   - External project (`repo:` present): lives in another git repository.
+#     `path` is relative to THAT repo's root (addresses a specific package
+#     inside a monorepo dependency; omit if the whole repo is the target).
+#     Resolved to a machine-local path in .project.lock.yaml (never committed)
+#     by scripts/update-project-lock.sh (or .ps1 on Windows).
+#
+# `notes` is free text: what this project holds, any acronyms, and when an
+# agent working here should read its agent docs before proceeding. This is
+# the field that makes the whole feature useful — don't leave it blank.
+#
+# Restricted YAML: exactly one list (`projects:`), 2-space-indented `- key:`
+# entries, 4-space-indented continuation fields, flat scalars only. See
+# reference/multi-repo.md in the ai-sdlc-bootstrap skill for why.
+#
+# After editing this file, run `make update-project-lock`
+# (or scripts/update-project-lock.ps1 directly on Windows) to refresh the lock.
+
+name: {{PROJECT_SLUG}}
+
+projects:
+  # - name: pricing-engine
+  #   path: packages/pricing-engine
+  #   notes: "Owns checkout pricing (aka 'PE'). Has its own AGENTS.md."
+  #
+  # - name: widgets-core
+  #   repo: git@github.com:acme/widgets-core.git
+  #   path: packages/core
+  #   notes: "Upstream rules feed for the pricing engine."
+  #   required: true

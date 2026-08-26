@@ -25,6 +25,7 @@
 - **Commit via `scripts/agent-commit.sh`**: it adds the agent Co-Authored-By trailer (`{{COAUTHOR_LINE}}`) and lets the post-commit hook log the right author kind in `docs/commit-log.md`. Plain `git commit` will be logged as `manual`.
 - **Merge policy**: `{{MERGE_POLICY}}`. See `CONTRIBUTING.md §6`.
 - **Before push/merge**: review every `manual` commit in the range — see `CONTRIBUTING.md §10`.
+- **Related projects**: before touching a related project's domain, read that project's own agent docs first — see `docs/agents/OVERVIEW.md` § Related projects and `CONTRIBUTING.md §14`.
 
 ---
 

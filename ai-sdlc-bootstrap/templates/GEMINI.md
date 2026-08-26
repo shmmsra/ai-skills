@@ -29,3 +29,5 @@
 **Merge policy**: `{{MERGE_POLICY}}`. Before any push/merge, review every `manual` commit in the range — see `CONTRIBUTING.md §10`.
 
 **Dev environment**: New tools / MCPs / dependencies you introduce must be reflected in `docs/dev-setup.md` in the same commit.
+
+**Related projects**: before touching a related project's domain, read that project's own agent docs first — see `docs/agents/OVERVIEW.md` § Related projects and `CONTRIBUTING.md §14`.

@@ -26,6 +26,22 @@ For the full architecture see [`docs/architecture.md`](../architecture.md) (crea
 
 ---
 
+## Related projects
+
+{{RELATED_PROJECTS_BLOCK}}
+
+**Before working on anything that touches a related project's domain** (per its notes above),
+read that project's own agent docs first — even if your tool doesn't auto-load them:
+
+1. `<path>/docs/agents/OVERVIEW.md` (plus `CONVENTIONS.md`, `STATUS.md`) — if it was bootstrapped with ai-sdlc-bootstrap
+2. `<path>/AGENTS.md` or `<path>/CLAUDE.md`
+3. `<path>/README.md`
+4. None found — proceed on judgment, and say so explicitly
+
+For external projects, `<path>` is the `local_path` resolved in `.project.lock.yaml` — run `make update-project-lock` if a project you need isn't listed there yet.
+
+---
+
 ## Key decisions (quick reference)
 
 Full ADRs in [`docs/decisions/`](../decisions/). Read the ADR before changing anything related to that decision.
@@ -81,9 +97,12 @@ Credentials (if any): see `.env.example` for the required variables. **Never** c
 │   ├── manual-testing.md
 │   ├── dev-setup.md        # Onboarding: deps, tools, MCP, skills, hooks
 │   └── commit-log.md       # Append-only audit log: agent vs manual commits
+├── project.deps.yaml       # Related projects (in-repo + external) — see § above
+├── .project.lock.yaml      # Resolved local paths for external projects (gitignored)
 ├── scripts/
 │   ├── setup-hooks.sh      # Installs pre-commit + post-commit
-│   └── agent-commit.sh     # Wrapper that adds the agent Co-Authored-By trailer
+│   ├── agent-commit.sh     # Wrapper that adds the agent Co-Authored-By trailer
+│   └── update-project-lock.sh / .ps1   # Refreshes .project.lock.yaml
 ├── CLAUDE.md / AGENTS.md / GEMINI.md / .cursor/rules/   # Agent entry points
 ├── CONTRIBUTING.md         # Workflow + merge policy + commit tracking + hygiene
 ├── Makefile                # `make check`, `make setup-hooks`
