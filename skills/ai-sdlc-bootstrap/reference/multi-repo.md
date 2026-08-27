@@ -106,6 +106,16 @@ projects:
     depth: 1
 ```
 
+**`local_path` for an external entry is always the git checkout root**, never joined with `path` —
+that's deliberate: it's what the reuse-on-rerun check validates (`local_path/.git` must exist),
+and joining would silently break that check on every subsequent run for any entry addressing a
+subpath of a monorepo dependency. When `path` is non-empty (addressing a specific package inside
+a monorepo dependency), **the actual project directory is `local_path` joined with `path`** —
+that's what recursion into the addressed package's own `project.deps.yaml` uses, and what an
+agent should treat as "where this project's code and docs actually live," not the bare
+`local_path`. For in-repo entries there's no such split: `local_path` is already the fully
+joined, ready-to-use directory.
+
 `kind` (`in-repo` / `external`) and `notes` are carried straight through from the manifest —
 `notes` is why the lock is agent-sufficient on its own, without needing to also open
 `project.deps.yaml`. `parent` and `depth` describe the resolved dependency tree (root repo →
@@ -154,29 +164,70 @@ of either kind are mixed together.
 **Local-path resolution priority for external entries** (first match wins):
 1. `--set NAME=PATH` passed to the script (always wins — explicit override).
 2. An existing `.project.lock.yaml` entry for that name whose `local_path` still has a `.git`
-   directory.
-3. The conventional sibling path `../<name>` next to the repo root, if it exists and has a
+   directory (this repo's own previous resolution).
+3. A **transitive lock preset** (see below) — a matching entry found in a related project's own
+   `.project.lock.yaml`, whose `local_path` still has a `.git` directory.
+4. The conventional sibling path `../<name>` next to the repo root, if it exists and has a
    `.git` directory (a lightweight convention-over-configuration fallback, not a formal rule).
-4. If `--check` was passed: stop here — no prompting, no mutation, just report.
-5. If stdin/stdout are a real TTY: prompt for a path interactively.
-6. If still unresolved and `--no-clone` was not passed: offer to clone (or auto-accept under
+5. If `--check` was passed: stop here — no prompting, no mutation, just report.
+6. If stdin/stdout are a real TTY: prompt for a path interactively.
+7. If still unresolved and `--no-clone` was not passed: offer to clone (or auto-accept under
    `--yes`) into the conventional sibling path.
-7. Otherwise: unresolved. Hard error if `required: true`, warning if `false`. (`required` has no
+8. Otherwise: unresolved. Hard error if `required: true`, warning if `false`. (`required` has no
    equivalent effect for in-repo entries — a missing in-repo path is always a warning, never a
    hard failure.)
+
+### Transitive lock presets
+
+If a node being recursed into has its *own* `.project.lock.yaml` already sitting there (it was
+independently resolved before, on this machine, outside of this run — e.g. the human already had
+a standalone checkout of it and had run the script inside it directly), that lock's already-resolved
+external entries are offered as presets before falling back to a fresh sibling-path guess or clone.
+This is what makes a chain like `root → ccd-assistant → cloud-shared-components` reuse a
+`cloud-shared-components` checkout ccd-assistant already knew about, instead of asking the human
+to locate (or re-clone) it from scratch.
+
+An explicit `--set` for that name, or an entry already in *this* repo's own top-level lock, always
+outranks a transitive preset and is never overwritten by one.
+
+Behavior differs by invocation mode — this is intentional, matching the confirm-vs-auto-accept
+split used for clone offers elsewhere in this script:
+- **Interactive** (real TTY): prompts per entry — *"Found '\<name>' already resolved by
+  '\<parent>'s own lock at '\<path>' — use it? \[Y/n, or type a different path\]"*. Accepting
+  (blank/`y`) uses the discovered path; `n` declines and falls through to normal resolution;
+  anything else is treated as an override path.
+- **`--check`**: auto-accepted (needed to keep walking the graph for reporting purposes) *and*
+  printed as an informational `preset: ...` line — this is how an agent discovers presets without
+  mutating anything (see below).
+- **Non-interactive, not `--check`** (e.g. a real `--yes` run): auto-accepted silently by default,
+  logged the same way. This is a script-level baseline for whoever runs it non-interactively
+  without an agent in the loop (a human via `--yes`, or CI) — it is **not** how an agent should
+  rely on this working; see the next section.
 
 ## Script invocation modes — this matters for agents specifically
 
 The script must never block on stdin when an agent invokes it through a non-interactive shell
 tool call — there is no TTY to prompt against, so it would hang.
 
-- **A human running it directly** in a real terminal: no flags needed, it prompts.
-- **An agent running it on the human's behalf**: never invoke it bare and hope. First ask the
-  human (a direct question) for the local path of any dependency the script will report as
-  missing, then re-invoke with `--set name=path` for each. Use `--yes` to accept clone
-  defaults non-interactively, `--no-clone` to get a fail-list instead of a clone offer, and
-  `--check` for a side-effect-free verification pass (e.g. before touching a related project's
-  code, confirm it's actually resolved).
+- **A human running it directly** in a real terminal: no flags needed, it prompts (including for
+  transitive lock presets, per above).
+- **An agent running it on the human's behalf**: never invoke it bare and hope, and never let a
+  real (`--yes`) run silently auto-accept a transitive lock preset on the human's behalf — that
+  skips the accept/override choice they're entitled to. Instead:
+  1. Run `scripts/update-project-lock.sh --check` (or `.ps1`) first. Its output reports, without
+     mutating anything, both `error: required project '<name>' ... could not be resolved` lines
+     (needs a fresh local path) and `preset: '<name>' already resolved by '<parent>'s own lock at
+     <path>` lines (a transitive default is available).
+  2. For every `preset:` line, ask the human whether to accept the discovered path or override it
+     — present the discovered path as the default, same as the script's own interactive prompt
+     would.
+  3. For every unresolved-required line, ask the human for a path (or whether to clone it), as
+     already established.
+  4. Re-invoke the script for real with `--set name=path` for **every** entry from both steps —
+     whether the human accepted the default or overrode it — plus `--yes` for any clone offers
+     they approved and `--no-clone` otherwise. Everything the human already decided on arrives as
+     an explicit `--set`; nothing is left for the script's own non-interactive auto-accept
+     fallback to silently decide.
 
 ## Agent-doc fallback chain
 
