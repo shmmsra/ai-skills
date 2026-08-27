@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ai-sdlc-bootstrap multi-repo engine v2.0
+# ai-sdlc-bootstrap multi-repo engine v2.1
 #
 # Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
 # (gitignored, fully resolved — the source of truth agents should read).
@@ -339,11 +339,65 @@ resolve_node() {
     LOCK_PARENTS+=("${parent}")
     LOCK_DEPTHS+=("${depth}")
 
-    local child_manifest="${local_path}/project.deps.yaml"
+    # For an external entry with a `path` (a subpath into a monorepo
+    # dependency), the addressed package's own project.deps.yaml — and
+    # anything it declares in-repo — lives under local_path/path, not at
+    # local_path (the checkout root). node_dir is that effective directory;
+    # it's what recursion and any in-repo children resolve relative to.
+    local node_dir="${local_path}"
+    if [ "${kind}" = "external" ] && [ -n "${path}" ]; then
+      node_dir="${local_path%/}/${path}"
+    fi
+
+    # If this node has its own .project.lock.yaml (it was independently
+    # resolved before, on this machine, outside of this run), seed its
+    # already-resolved external entries into PRESET_NAMES/PRESET_VALUES —
+    # the same top-priority mechanism --set uses — so resolving this node's
+    # own dependencies below can reuse them instead of asking from scratch.
+    # An explicit --set (or an already-known top-level lock entry) always
+    # outranks this and is never overwritten.
+    local child_lock="${node_dir}/.project.lock.yaml"
+    if [ -f "${child_lock}" ]; then
+      while IFS=$'\x1f' read -r s_name s_path s_repo s_notes s_required s_localpath s_parent s_depth s_kind; do
+        [ -z "${s_name}" ] && continue
+        [ "${s_kind}" != "external" ] && continue
+        map_get "${s_name}" PRESET_NAMES PRESET_VALUES >/dev/null && continue
+        map_get "${s_name}" EXISTING_NAMES EXISTING_PATHS >/dev/null && continue
+        [ -d "${s_localpath}/.git" ] || continue
+
+        if [ "${CHECK_ONLY}" -eq 1 ]; then
+          echo "preset: '${s_name}' already resolved by '${name}'s own lock at ${s_localpath}" >&2
+          map_set "${s_name}" "${s_localpath}" PRESET_NAMES PRESET_VALUES
+        elif [ -t 0 ] && [ -t 1 ]; then
+          local p_ans=""
+          read -r -p "Found '${s_name}' already resolved by '${name}'s own lock at '${s_localpath}' — use it? [Y/n, or type a different path] " p_ans
+          case "${p_ans}" in
+            ""|y|Y|yes|YES)
+              echo "preset: using '${s_name}' -> ${s_localpath}" >&2
+              map_set "${s_name}" "${s_localpath}" PRESET_NAMES PRESET_VALUES
+              ;;
+            n|N|no|NO) : ;; # declined — fall through to normal resolution for this name
+            *)
+              if [ ! -d "${p_ans}/.git" ]; then
+                echo "warning: '${p_ans}' does not look like a git checkout (no .git)" >&2
+              fi
+              p_ans="$(cd "${p_ans}" 2>/dev/null && pwd -P || printf '%s' "${p_ans}")"
+              echo "preset: using '${s_name}' -> ${p_ans}" >&2
+              map_set "${s_name}" "${p_ans}" PRESET_NAMES PRESET_VALUES
+              ;;
+          esac
+        else
+          echo "preset: '${s_name}' already resolved by '${name}'s own lock at ${s_localpath} — using it (pass --set ${s_name}=PATH to override)" >&2
+          map_set "${s_name}" "${s_localpath}" PRESET_NAMES PRESET_VALUES
+        fi
+      done < <(parse_project_list "${child_lock}")
+    fi
+
+    local child_manifest="${node_dir}/project.deps.yaml"
     if [ -f "${child_manifest}" ]; then
       while IFS=$'\x1f' read -r c_name c_path c_repo c_notes c_required c_lp c_par c_dep c_kind; do
         [ -z "${c_name}" ] && continue
-        resolve_node "${c_name}" "${c_repo}" "${c_path}" "${c_notes}" "${c_required}" "${name}" "$((depth + 1))" "${local_path}"
+        resolve_node "${c_name}" "${c_repo}" "${c_path}" "${c_notes}" "${c_required}" "${name}" "$((depth + 1))" "${node_dir}"
       done < <(parse_project_list "${child_manifest}")
     fi
   elif [ "${required}" = "true" ]; then

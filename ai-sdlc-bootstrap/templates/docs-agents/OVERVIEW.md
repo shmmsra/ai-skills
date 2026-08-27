@@ -38,7 +38,11 @@ guaranteed current on its own; if `.project.lock.yaml` is missing or looks stale
 run `make update-project-lock` (or `scripts/update-project-lock.ps1` on Windows) first.
 
 **Before working on anything that touches a related project's domain** (per its `notes` in the
-lock), read that project's own agent docs first — even if your tool doesn't auto-load them:
+lock), read that project's own agent docs first — even if your tool doesn't auto-load them. Use
+`<local_path>` directly, **except** for an external entry whose lock record has a non-empty
+`path` (it addresses one package inside a monorepo dependency) — there, join `local_path` and
+`path` first; that joined directory is where the addressed package's own docs and code actually
+live, not the bare `local_path` (the whole monorepo's checkout root):
 
 1. `<local_path>/docs/agents/OVERVIEW.md` (plus `CONVENTIONS.md`, `STATUS.md`) — if it was bootstrapped with ai-sdlc-bootstrap
 2. `<local_path>/AGENTS.md` or `<local_path>/CLAUDE.md`

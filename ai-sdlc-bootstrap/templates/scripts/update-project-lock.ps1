@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  ai-sdlc-bootstrap multi-repo engine v2.0 (Windows).
+  ai-sdlc-bootstrap multi-repo engine v2.1 (Windows).
   Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
   (gitignored, fully resolved — the source of truth agents should read).
   See scripts/update-project-lock.sh for macOS/Linux. Full design:
@@ -249,14 +249,67 @@ function Resolve-Node {
     if ($kind -eq 'in-repo' -or $localPath) {
         $LockEntries.Add(@{ name = $Name; kind = $kind; repo = $Repo; path = $Path; local_path = $localPath; notes = $Notes; parent = $Parent; depth = $Depth })
 
-        $childManifest = Join-Path $localPath 'project.deps.yaml'
+        # For an external entry with a Path (a subpath into a monorepo
+        # dependency), the addressed package's own project.deps.yaml — and
+        # anything it declares in-repo — lives under localPath/Path, not at
+        # localPath (the checkout root). nodeDir is that effective directory;
+        # it's what recursion and any in-repo children resolve relative to.
+        $nodeDir = $localPath
+        if ($kind -eq 'external' -and $Path) {
+            $nodeDir = Join-Path $localPath $Path
+        }
+
+        # If this node has its own .project.lock.yaml (it was independently
+        # resolved before, on this machine, outside of this run), seed its
+        # already-resolved external entries into $PresetPaths — the same
+        # top-priority mechanism -Set uses — so resolving this node's own
+        # dependencies below can reuse them instead of asking from scratch.
+        # An explicit -Set (or an already-known top-level lock entry) always
+        # outranks this and is never overwritten.
+        $childLock = Join-Path $nodeDir '.project.lock.yaml'
+        if (Test-Path $childLock) {
+            foreach ($seed in (Parse-ProjectList -Path $childLock)) {
+                $sName = Get-Field $seed 'name'
+                if (-not $sName) { continue }
+                if ((Get-Field $seed 'kind') -ne 'external') { continue }
+                if ($PresetPaths.ContainsKey($sName)) { continue }
+                if ($ExistingLockPath.ContainsKey($sName)) { continue }
+                $sLocalPath = Get-Field $seed 'local_path'
+                if (-not (Test-Path (Join-Path $sLocalPath '.git'))) { continue }
+
+                if ($Check) {
+                    Write-ErrLine "preset: '$sName' already resolved by '$Name's own lock at $sLocalPath"
+                    $PresetPaths[$sName] = $sLocalPath
+                } elseif (Test-InteractiveConsole) {
+                    $pAns = Read-Host "Found '$sName' already resolved by '$Name's own lock at '$sLocalPath' — use it? [Y/n, or type a different path]"
+                    if ($pAns -match '^[Nn]') {
+                        # declined — fall through to normal resolution for this name
+                    } elseif ([string]::IsNullOrWhiteSpace($pAns) -or $pAns -match '^[Yy]') {
+                        Write-ErrLine "preset: using '$sName' -> $sLocalPath"
+                        $PresetPaths[$sName] = $sLocalPath
+                    } else {
+                        if (-not (Test-Path (Join-Path $pAns '.git'))) {
+                            Write-ErrLine "warning: '$pAns' does not look like a git checkout (no .git)"
+                        }
+                        $pAns = if (Test-Path $pAns) { (Resolve-Path $pAns).Path } else { $pAns }
+                        Write-ErrLine "preset: using '$sName' -> $pAns"
+                        $PresetPaths[$sName] = $pAns
+                    }
+                } else {
+                    Write-ErrLine "preset: '$sName' already resolved by '$Name's own lock at $sLocalPath — using it (pass -Set $sName=PATH to override)"
+                    $PresetPaths[$sName] = $sLocalPath
+                }
+            }
+        }
+
+        $childManifest = Join-Path $nodeDir 'project.deps.yaml'
         if (Test-Path $childManifest) {
             foreach ($child in (Parse-ProjectList -Path $childManifest)) {
                 $cName = Get-Field $child 'name'
                 if (-not $cName) { continue }
                 Resolve-Node -Name $cName -Repo (Get-Field $child 'repo') -Path (Get-Field $child 'path') `
                     -Notes (Get-Field $child 'notes') -Required (Get-Field $child 'required' 'true') `
-                    -Parent $Name -Depth ($Depth + 1) -BaseDir $localPath
+                    -Parent $Name -Depth ($Depth + 1) -BaseDir $nodeDir
             }
         }
     } elseif ($Required -eq 'true') {
