@@ -270,7 +270,7 @@ The following files are part of the project's contract with both humans and agen
 | `.vscode/`, `.zed/`, etc. | When adding a recommended extension, snippet, or workspace setting that benefits all contributors. |
 | `docs/dev-setup.md` | When adding a new dependency, MCP server, skill, language toolchain, or required tool. The reproducibility of onboarding depends on this. |
 | `docs/decisions/` | When making an architectural decision another agent might wonder about. See ADR template. |
-| `project.deps.yaml` | When adding, removing, or renaming a related project. Run `make update-project-lock` after editing — see §14. |
+| `project.deps.yaml` | When adding, removing, or renaming a related project. Run `scripts/update-project-lock.sh`/`.ps1` (or `make update-project-lock` if applicable) after editing — see §14. |
 
 Stale hygiene files are a documented failure mode of multi-agent SDLCs. Don't let them rot.
 
@@ -307,10 +307,15 @@ This project declares relationships with other projects — either sub-projects 
 After adding, removing, or editing an entry in `project.deps.yaml`, run:
 
 ```bash
-make update-project-lock
+scripts/update-project-lock.sh     # macOS / Linux
+scripts/update-project-lock.ps1    # Windows
 ```
 
-(or `scripts/update-project-lock.ps1` directly on Windows). This walks the full dependency graph recursively — in-repo and external hops alike — prompts for any unresolved local path (or offers to clone it), and detects cyclic dependencies.
+or `make update-project-lock` if this project uses a Makefile — the scripts are the ones that
+actually do the work and always exist here regardless of build tooling; `make` is only ever a
+convenience wrapper around them, never a requirement. This walks the full dependency graph
+recursively — in-repo and external hops alike — prompts for any unresolved local path (or offers
+to clone it), and detects cyclic dependencies.
 
 ### Two invocation modes
 

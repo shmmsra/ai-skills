@@ -35,7 +35,9 @@ a related project's own further dependencies are walked too), each with its `kin
 `local_path`, and its `notes` (what it holds, acronyms, when to check it). **`project.deps.yaml`**
 (committed) is the raw input you hand-edit to add/remove/change a relationship — it is not
 guaranteed current on its own; if `.project.lock.yaml` is missing or looks stale relative to it,
-run `make update-project-lock` (or `scripts/update-project-lock.ps1` on Windows) first.
+run `scripts/update-project-lock.sh` (macOS/Linux) or `scripts/update-project-lock.ps1` (Windows)
+first — or `make update-project-lock` if this project uses a Makefile; the scripts always work
+regardless of build tooling, `make` is only ever a convenience wrapper around them.
 
 **Never summarize the specific current entries here** (e.g. "this repo's related projects are X, Y, Z, addressing paths under W") — reference these two files generically only. That duplicates data that goes stale the instant an entry changes.
 

@@ -23,8 +23,10 @@
 # multi-line blocks (content indented >= 6 spaces; folded `>` blocks are not
 # supported). See reference/multi-repo.md in the ai-sdlc-bootstrap skill for why.
 #
-# After editing this file, run `make update-project-lock`
-# (or scripts/update-project-lock.ps1 directly on Windows) to refresh the lock.
+# After editing this file, run scripts/update-project-lock.sh (macOS/Linux) or
+# scripts/update-project-lock.ps1 (Windows) to refresh the lock — or
+# `make update-project-lock` if this project uses a Makefile; the scripts always
+# work regardless of build tooling, `make` is only ever a convenience wrapper.
 
 name: {{PROJECT_SLUG}}
 
