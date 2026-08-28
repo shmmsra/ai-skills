@@ -104,7 +104,7 @@ When approved:
    9. `Makefile` (only if user accepted; otherwise emit `scripts/check.sh`)
    10. `scripts/setup-hooks.sh` (now installs **both** pre-commit and post-commit hooks)
    11. **`scripts/agent-commit.sh`** (if `{{COAUTHOR_AGENT}} == yes`) — helper that adds the agent's Co-Authored-By trailer
-   12. **`project.deps.yaml` + `scripts/update-project-lock.sh` + `scripts/update-project-lock.ps1`** (only if `{{MULTI_REPO_ENABLED}} == yes`) — written from the Round 6 answers; the initial `.project.lock.yaml` is produced afterward by invoking the script (see step 4 below), never hand-written
+   12. **`project.deps.yaml` + `scripts/update-project-lock.sh` + `scripts/update-project-lock.ps1`** (only if `{{MULTI_REPO_ENABLED}} == yes`) — written from the Round 6 answers; the initial `.project.lock.yaml` is produced afterward by invoking the script (see step 4 below), never hand-written. When writing `CONTRIBUTING.md` §14 and `OVERVIEW.md`'s Related-projects section in the steps above, don't summarize *which* projects were just declared — see non-negotiable rule 10.
    13. `.github/workflows/ci.yml` (only if user picked GitHub Actions)
    14. **Hygiene files** (only those selected in Q13):
        - `README.md` (new or appended)
@@ -202,6 +202,7 @@ Templates live in `templates/`. Always read the template right before writing th
 7. **The skill is project-agnostic.** Never copy domain-specific terms from any reference project into the target. Every project-specific value comes from the interview, not from templates or examples baked into this skill.
 8. **The commit-tracking system is opt-in.** If the user picks `convention-only` in Q10, do *not* install the post-commit hook or scaffold `docs/commit-log.md`.
 9. **Related-projects support is opt-in.** Never write `project.deps.yaml`, the two lock-resolution scripts, or any of the associated doc sections unless Round 6 was explicitly accepted (or `project.deps.yaml` already existed). Never hand-write `.project.lock.yaml` — only the script writes it, even the first time.
+10. **Never summarize the Round 6 answers into `CONTRIBUTING.md` §14, `OVERVIEW.md`, or any other doc.** A sentence like "this repo's related projects are X, Y, Z, addressing paths under W" duplicates data that lives in `project.deps.yaml`/`.project.lock.yaml` and goes stale the moment an entry changes — exactly the drift the manifest/lock split exists to prevent. Reference those files generically; don't restate their contents.
 
 ---
 

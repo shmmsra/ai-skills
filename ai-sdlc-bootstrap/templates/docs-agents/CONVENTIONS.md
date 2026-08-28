@@ -51,7 +51,9 @@
 
 ### Related-project awareness
 
+- **Check `.project.lock.yaml` before starting any non-trivial task**, not only once you already suspect it's relevant — its `notes` field on each entry is the only way to learn a related project exists and might overlap with what you're doing, since nothing is summarized elsewhere on purpose.
 - Before making a change that touches a related project's domain (see `docs/agents/OVERVIEW.md` § Related projects), read that project's own agent docs first — don't assume behavior you haven't verified.
+- **Never copy specific entries** (names, repos, paths, notes) from `project.deps.yaml` or `.project.lock.yaml` into this file, `OVERVIEW.md`, `CONTRIBUTING.md`, or any other doc — reference those files generically only. A sentence like "X's entries are Y, Z, addressing paths under W" duplicates data that drifts out of date the moment an entry changes, which is exactly what these two files exist to prevent.
 
 ---
 
