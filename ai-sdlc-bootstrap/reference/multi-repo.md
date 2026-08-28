@@ -272,6 +272,32 @@ read, in order, the first that exists at the resolved path:
 `<path>` is the `local_path` from `.project.lock.yaml` — for both kinds now, since in-repo
 entries carry a resolved absolute `local_path` there too, not just external ones.
 
+## Adapter-file placement
+
+Where the "Related projects" pointer line goes in each adapter file, and why, so an agent
+editing an **existing, non-pristine** file has an explicit rule to anchor on instead of
+pattern-matching the nearest similarly-shaped list:
+
+- **`CLAUDE.md`**: its own `### Related projects` subsection under §0, right after "Merge
+  policy" — unambiguous, since it's a distinctly headed subsection, not a bare bullet.
+- **`AGENTS.md` / `.cursor/rules/*.mdc`**: the **last bullet in "Key rules"**, immediately
+  before the next heading.
+- **`GEMINI.md`**: the last bold-labeled paragraph in "Antigravity-specific notes."
+
+**Never place it inside a numbered "hard constraints" / "architecture boundaries" list** (the
+one rendering `{{DOMAIN_RULES_BLOCK}}`). The pointer is a discovery/awareness reminder — "check
+this before you act" — not a hard architectural gate on what's permitted; those numbered lists
+are reserved for rules that restrict actions (cross-platform build constraints, IPC boundary
+approval, PR-only workflow, etc.), a different kind of rule entirely. This distinction is exactly
+what went wrong when this drifted in practice: a bare bullet with no distinguishing marker,
+sitting next to a numbered list about boundaries, is an easy thing to mis-file as "architecture
+boundaries" on a second, less-pristine pass — reasoning about *why* it doesn't belong there is
+what actually prevents that, not just knowing where it should go instead.
+
+When editing an existing adapter file that already carries this pointer from a prior session,
+**preserve its existing placement** rather than re-deriving a fresh position from the template —
+see also "Rerunning the bootstrap skill" below.
+
 ## Platform notes
 
 Two engines, not three — POSIX shell (`scripts/update-project-lock.sh`) covers **macOS and
@@ -296,3 +322,11 @@ A rerun of `ai-sdlc-bootstrap` on a repo that already has `project.deps.yaml`:
    manifest changed, so engine bugfixes/features propagate. Both scripts carry a version
    comment header (`# ai-sdlc-bootstrap multi-repo engine vX.Y`) so staleness is visible even
    without a full rerun.
+4. **Before touching an adapter file that already has the "Related projects" pointer** (a prior
+   session already ran Round 6 here, fully or partially), locate its *existing* placement first
+   and preserve it — don't independently re-derive a position from the template and let it land
+   wherever seems reasonable this time. Two sessions choosing differently is exactly the drift
+   this step exists to prevent; see "Adapter-file placement" above. Showing the diff before
+   writing (per the general existing-file rules) catches *content* changes, but reviewing that
+   diff doesn't reliably catch "this moved to a different list than last session" unless the
+   agent is deliberately checking placement, not just content.

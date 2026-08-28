@@ -95,7 +95,7 @@ When approved:
 2. **Order of writes** (do not parallelize — later files reference earlier ones):
    1. `docs/agents/{OVERVIEW,CONVENTIONS,STATUS}.md` (canonical rules — everything points here)
    2. `CONTRIBUTING.md`
-   3. `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules/{{PROJECT_SLUG}}.mdc` (only the ones selected)
+   3. `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules/{{PROJECT_SLUG}}.mdc` (only the ones selected). If `{{MULTI_REPO_ENABLED}} == yes`, the "Related projects" pointer line has a specific, non-obvious required placement per file — see `reference/multi-repo.md` § Adapter-file placement — and must be found and preserved, not re-derived, on an existing file that already has it.
    4. `docs/CHANGELOG.md`, `docs/requirements.md`, `docs/manual-testing.md`
    5. `docs/issues.md` (the appropriate variant: inrepo / github / jira)
    6. `docs/decisions/README.md` (ADR template) and `docs/decisions/0001-adopt-ai-sdlc.md` (first ADR)
