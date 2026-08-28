@@ -321,10 +321,10 @@ to clone it), and detects cyclic dependencies.
 
 - **Interactive** (a human runs it directly): prompts on the terminal for any missing local path, asks before cloning, and — if a related project already has its *own* `.project.lock.yaml` recording where one of *its* dependencies lives locally — offers that as a default you can accept or override.
 - **Non-interactive (agent)**: never invoke the script blind and let it decide on the human's behalf — even though `--yes` *would* auto-accept both clone offers and the transitive-lock defaults above non-interactively, that skips the accept/override choice a human gets when running it directly. Instead:
-  1. Run `scripts/update-project-lock.sh --check` (or `.ps1` on Windows) first. It reports, without changing anything: `error: required project '<name>' ... could not be resolved` for anything needing a fresh local path, and `preset: '<name>' already resolved by '<parent>'s own lock at <path>` for anything with a transitive default available.
-  2. For each `preset:` line, ask the human whether to accept that path or override it — present the discovered path as the default.
-  3. For each unresolved-required line, ask the human for a path (or whether to clone it).
-  4. Re-run for real with `--set <name>=<path>` for every entry from steps 2–3 — whether accepted or overridden — plus `--yes` for any approved clones and `--no-clone` otherwise. Every decision the human made arrives as an explicit `--set`; nothing is left for the script to silently decide.
+  1. Run `scripts/update-project-lock.sh --check --porcelain` (or `.ps1 -Check -Porcelain` on Windows) first. Beyond the existing stderr text, `--porcelain` emits one `DECISION name=<name> repo=<repo> parent=<parent> kind=unresolved required=<true|false>` or `DECISION ... kind=preset preset_path=<path>` line per stdout for each entry needing a decision — reliably parseable instead of scraping prose.
+  2. For each `kind=preset` line, ask the human whether to accept that path or override it — present the discovered path as the default.
+  3. For each `kind=unresolved` line, ask the human for a path (or whether to clone it).
+  4. Re-run for real with `--set <name>=<path>` for every entry from steps 2–3 — whether accepted or overridden — plus `--yes` for any approved clones, `--no-clone` otherwise, and `--require-decisions` (`-RequireDecisions`) as a safety net: it fails the run non-zero if any optional dependency would still be silently skipped, instead of exiting `0` with an easy-to-miss warning. Every decision the human made arrives as an explicit `--set`; nothing is left for the script to silently decide.
 
 ### Cross-project awareness when working here
 
