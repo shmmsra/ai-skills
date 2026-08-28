@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ai-sdlc-bootstrap multi-repo engine v2.3
+# ai-sdlc-bootstrap multi-repo engine v2.4
 #
 # Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
 # (gitignored, fully resolved — the source of truth agents should read).
@@ -28,11 +28,18 @@
 #                      parseable, in addition to the existing stderr text).
 #                      Requires --check.
 #   --require-decisions
-#                      Combine with a real (mutating) run: fail non-zero if any
-#                      optional dependency would be silently skipped instead of
-#                      resolved — use after every decision has been supplied
-#                      via --set, as a safety net against a decision surfacing
-#                      after --check was last run.
+#                      Force fail-if-any-decision-needed behavior (see below).
+#                      This is already the default for any non-interactive run
+#                      that isn't --check (no TTY) — this flag exists so an
+#                      interactive human run can opt into the same strictness.
+#   --allow-silent-skip
+#                      Opt out of the non-interactive default above: allow a
+#                      non-interactive, non-`--check` run to silently skip an
+#                      unresolved optional dependency, or auto-accept a
+#                      transitive lock preset without an explicit --set, same
+#                      as pre-2.4 behavior. For scripted/CI callers that
+#                      intentionally want best-effort — not agents. Mutually
+#                      exclusive with --require-decisions.
 #   -h, --help         Show this help.
 #
 # Non-interactive (agent) usage: never invoke this bare and expect it to prompt —
@@ -55,12 +62,13 @@ AUTO_YES=0
 NO_CLONE=0
 PORCELAIN=0
 REQUIRE_DECISIONS=0
+ALLOW_SILENT_SKIP=0
 DECISIONS_NEEDED=0
 PRESET_NAMES=()
 PRESET_VALUES=()
 
 usage() {
-  sed -n '2,41p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,48p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -76,6 +84,7 @@ while [ $# -gt 0 ]; do
     --check) CHECK_ONLY=1; shift ;;
     --porcelain) PORCELAIN=1; shift ;;
     --require-decisions) REQUIRE_DECISIONS=1; shift ;;
+    --allow-silent-skip) ALLOW_SILENT_SKIP=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "error: unknown argument '$1'" >&2; usage; exit 64 ;;
   esac
@@ -84,6 +93,26 @@ done
 if [ "${PORCELAIN}" -eq 1 ] && [ "${CHECK_ONLY}" -eq 0 ]; then
   echo "error: --porcelain requires --check" >&2
   exit 64
+fi
+
+if [ "${REQUIRE_DECISIONS}" -eq 1 ] && [ "${ALLOW_SILENT_SKIP}" -eq 1 ]; then
+  echo "error: --require-decisions and --allow-silent-skip are mutually exclusive" >&2
+  exit 64
+fi
+
+INTERACTIVE=0
+if [ -t 0 ] && [ -t 1 ]; then
+  INTERACTIVE=1
+fi
+
+EFFECTIVE_REQUIRE_DECISIONS=0
+if [ "${REQUIRE_DECISIONS}" -eq 1 ]; then
+  EFFECTIVE_REQUIRE_DECISIONS=1
+elif [ "${CHECK_ONLY}" -eq 0 ] && [ "${INTERACTIVE}" -eq 0 ] && [ "${ALLOW_SILENT_SKIP}" -eq 0 ]; then
+  # Non-interactive (no TTY) and not --check: this is the agent-real-run case
+  # where a decision falling through to silent-skip is a bug, not a feature —
+  # see reference/multi-repo.md "Script invocation modes".
+  EFFECTIVE_REQUIRE_DECISIONS=1
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -480,6 +509,7 @@ resolve_node() {
         else
           echo "preset: '${s_name}' already resolved by '${name}'s own lock at ${s_localpath} — using it (pass --set ${s_name}=PATH to override)" >&2
           map_set "${s_name}" "${s_localpath}" PRESET_NAMES PRESET_VALUES
+          DECISIONS_NEEDED=$((DECISIONS_NEEDED + 1))
         fi
       done < <(parse_project_list "${child_lock}")
     fi
@@ -518,7 +548,7 @@ if [ "${FAILED}" -eq 1 ]; then
   exit 1
 fi
 
-if [ "${REQUIRE_DECISIONS}" -eq 1 ] && [ "${DECISIONS_NEEDED}" -gt 0 ]; then
+if [ "${EFFECTIVE_REQUIRE_DECISIONS}" -eq 1 ] && [ "${DECISIONS_NEEDED}" -gt 0 ]; then
   echo "error: ${DECISIONS_NEEDED} project(s) need a human decision before this can complete — run --check first" >&2
   exit 1
 fi

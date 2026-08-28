@@ -324,7 +324,16 @@ to clone it), and detects cyclic dependencies.
   1. Run `scripts/update-project-lock.sh --check --porcelain` (or `.ps1 -Check -Porcelain` on Windows) first. Beyond the existing stderr text, `--porcelain` emits one `DECISION name=<name> repo=<repo> parent=<parent> kind=unresolved required=<true|false>` or `DECISION ... kind=preset preset_path=<path>` line per stdout for each entry needing a decision — reliably parseable instead of scraping prose.
   2. For each `kind=preset` line, ask the human whether to accept that path or override it — present the discovered path as the default.
   3. For each `kind=unresolved` line, ask the human for a path (or whether to clone it).
-  4. Re-run for real with `--set <name>=<path>` for every entry from steps 2–3 — whether accepted or overridden — plus `--yes` for any approved clones, `--no-clone` otherwise, and `--require-decisions` (`-RequireDecisions`) as a safety net: it fails the run non-zero if any optional dependency would still be silently skipped, instead of exiting `0` with an easy-to-miss warning. Every decision the human made arrives as an explicit `--set`; nothing is left for the script to silently decide.
+  4. Re-run for real with every decision from steps 2–3 as an explicit `--set <name>=<path>`, plus `--yes` for any approved clones and `--no-clone` otherwise. Copy the shape below rather than reconstructing it live:
+     ```bash
+     scripts/update-project-lock.sh \
+       --set some-dep=/path/to/some-dep \
+       --set another-dep=/path/to/another-dep \
+       --yes \
+       --no-clone
+     ```
+     A non-interactive run that isn't `--check` fails by default if anything still falls through to a silent skip or auto-accept — you don't need to ask for that separately. `--allow-silent-skip` (`-AllowSilentSkip`) opts back into old best-effort behavior, for scripted/CI use only, never to make a failing agent run pass without understanding what it caught.
+  5. Re-run `--check --porcelain` once more after the real run succeeds. Pass criterion: `all related projects resolved` and no `DECISION ...` lines — confirming nothing new surfaced between steps 1 and 4.
 
 ### Cross-project awareness when working here
 

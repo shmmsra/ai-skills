@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  ai-sdlc-bootstrap multi-repo engine v2.3 (Windows).
+  ai-sdlc-bootstrap multi-repo engine v2.4 (Windows).
   Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
   (gitignored, fully resolved — the source of truth agents should read).
   See scripts/update-project-lock.sh for macOS/Linux. Full design:
@@ -32,10 +32,17 @@
   existing stderr text). Requires -Check.
 
 .PARAMETER RequireDecisions
-  Combine with a real (mutating) run: fail non-zero if any optional
-  dependency would be silently skipped instead of resolved — use after
-  every decision has been supplied via -Set, as a safety net against a
-  decision surfacing after -Check was last run.
+  Force fail-if-any-decision-needed behavior (see below). This is already
+  the default for any non-interactive run that isn't -Check (no interactive
+  host) — this switch exists so an interactive human run can opt into the
+  same strictness.
+
+.PARAMETER AllowSilentSkip
+  Opt out of the non-interactive default above: allow a non-interactive run
+  that isn't -Check to silently skip an unresolved optional dependency, or
+  auto-accept a transitive lock preset without an explicit -Set, same as
+  pre-2.4 behavior. For scripted/CI callers that intentionally want
+  best-effort — not agents. Mutually exclusive with -RequireDecisions.
 
 .NOTES
   Non-interactive (agent) usage: never invoke this and expect it to prompt —
@@ -50,6 +57,7 @@ param(
     [switch]$NoClone,
     [switch]$Porcelain,
     [switch]$RequireDecisions,
+    [switch]$AllowSilentSkip,
     [string[]]$Set = @()
 )
 
@@ -76,6 +84,24 @@ function Test-InteractiveConsole {
 if ($Porcelain -and -not $Check) {
     Write-ErrLine "error: -Porcelain requires -Check"
     exit 64
+}
+
+if ($RequireDecisions -and $AllowSilentSkip) {
+    Write-ErrLine "error: -RequireDecisions and -AllowSilentSkip are mutually exclusive"
+    exit 64
+}
+
+$Interactive = Test-InteractiveConsole
+
+$EffectiveRequireDecisions = $false
+if ($RequireDecisions) {
+    $EffectiveRequireDecisions = $true
+} elseif (-not $Check -and -not $Interactive -and -not $AllowSilentSkip) {
+    # Non-interactive (no interactive host) and not -Check: this is the
+    # agent-real-run case where a decision falling through to silent-skip is
+    # a bug, not a feature — see reference/multi-repo.md "Script invocation
+    # modes".
+    $EffectiveRequireDecisions = $true
 }
 
 function Get-RepoRoot {
@@ -385,6 +411,7 @@ function Resolve-Node {
                 } else {
                     Write-ErrLine "preset: '$sName' already resolved by '$Name's own lock at $sLocalPath — using it (pass -Set $sName=PATH to override)"
                     $PresetPaths[$sName] = $sLocalPath
+                    $script:DecisionsNeeded++
                 }
             }
         }
@@ -427,7 +454,7 @@ foreach ($rec in (Parse-ProjectList -Path $Manifest)) {
 
 if ($FailedRequired) { exit 1 }
 
-if ($RequireDecisions -and $DecisionsNeeded -gt 0) {
+if ($EffectiveRequireDecisions -and $DecisionsNeeded -gt 0) {
     Write-ErrLine "error: $DecisionsNeeded project(s) need a human decision before this can complete — run -Check first"
     exit 1
 }

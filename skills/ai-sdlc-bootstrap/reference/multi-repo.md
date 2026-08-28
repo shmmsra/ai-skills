@@ -228,10 +228,14 @@ split used for clone offers elsewhere in this script:
 - **`--check`**: auto-accepted (needed to keep walking the graph for reporting purposes) *and*
   printed as an informational `preset: ...` line — this is how an agent discovers presets without
   mutating anything (see below).
-- **Non-interactive, not `--check`** (e.g. a real `--yes` run): auto-accepted silently by default,
-  logged the same way. This is a script-level baseline for whoever runs it non-interactively
-  without an agent in the loop (a human via `--yes`, or CI) — it is **not** how an agent should
-  rely on this working; see the next section.
+- **Non-interactive, not `--check`** (e.g. a real `--yes` run): as of engine v2.4, this now **fails
+  the run by default** (`error: N project(s) need a human decision before this can complete — run
+  --check first`, non-zero exit) rather than silently auto-accepting — a fresh transitive preset
+  encountered only during the real run (e.g. because a dependency's own manifest changed between
+  the `--check` pass and now) is exactly the kind of decision an agent must never make on the
+  human's behalf. Pass `--allow-silent-skip` (`.ps1 -AllowSilentSkip`) to opt back into pre-2.4
+  auto-accept behavior for scripted/CI callers that genuinely want best-effort, not agents. See the
+  next section for the full agent protocol.
 
 ## Script invocation modes — this matters for agents specifically
 
@@ -256,14 +260,28 @@ tool call — there is no TTY to prompt against, so it would hang.
      interactive prompt would.
   3. For every `kind=unresolved` line, ask the human for a path (or whether to clone it), as
      already established.
-  4. Re-invoke the script for real with `--set name=path` for **every** entry from both steps —
-     whether the human accepted the default or overrode it — plus `--yes` for any clone offers
-     they approved and `--no-clone` otherwise. Everything the human already decided on arrives as
-     an explicit `--set`; nothing is left for the script's own non-interactive auto-accept
-     fallback to silently decide. Also add `--require-decisions` (`.ps1 -RequireDecisions`) to
-     this real run: if a new optional dependency appeared between the `--check` pass and now (or
-     a decision was simply missed), the mutating command fails loudly instead of exiting `0` with
-     a `warning: ... skipping` an agent could mistake for a clean finish.
+  4. Re-invoke the script for real with **every** decision from steps 2–3 as an explicit
+     `--set name=path`, plus `--yes` for any approved clones and `--no-clone` otherwise. Copy the
+     shape below rather than reconstructing it from memory — the flags are easy to drop when
+     typing the command live, and a dropped flag here is exactly the failure mode this whole
+     section exists to prevent:
+     ```bash
+     scripts/update-project-lock.sh \
+       --set some-dep=/path/to/some-dep \
+       --set another-dep=/path/to/another-dep \
+       --yes \
+       --no-clone
+     ```
+     As of engine v2.4, a non-interactive run that isn't `--check` **fails by default** if
+     anything still falls through to a silent skip or auto-accept — this is no longer something
+     you need to remember to ask for. If you deliberately want the old best-effort behavior
+     instead (rare — this is a scripted/CI use case, not an agent one), add
+     `--allow-silent-skip`; do **not** reach for it just to make a failing run pass without first
+     understanding what it caught.
+  5. After the real run succeeds, re-invoke with `--check --porcelain` once more. Pass criterion:
+     `all related projects resolved` on stdout and no `DECISION ...` lines — confirming nothing
+     new surfaced between steps 1 and 4 (e.g. a dependency's own manifest changing concurrently)
+     that still needs a human call.
 
 ## Agent-doc fallback chain
 
