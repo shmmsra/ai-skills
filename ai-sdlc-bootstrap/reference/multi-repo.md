@@ -243,20 +243,27 @@ tool call — there is no TTY to prompt against, so it would hang.
 - **An agent running it on the human's behalf**: never invoke it bare and hope, and never let a
   real (`--yes`) run silently auto-accept a transitive lock preset on the human's behalf — that
   skips the accept/override choice they're entitled to. Instead:
-  1. Run `scripts/update-project-lock.sh --check` (or `.ps1`) first. Its output reports, without
-     mutating anything, both `error: required project '<name>' ... could not be resolved` lines
-     (needs a fresh local path) and `preset: '<name>' already resolved by '<parent>'s own lock at
-     <path>` lines (a transitive default is available).
-  2. For every `preset:` line, ask the human whether to accept the discovered path or override it
-     — present the discovered path as the default, same as the script's own interactive prompt
-     would.
-  3. For every unresolved-required line, ask the human for a path (or whether to clone it), as
+  1. Run `scripts/update-project-lock.sh --check --porcelain` (or `.ps1 -Check -Porcelain`)
+     first. In addition to the existing human-readable stderr text (`error: required project
+     '<name>' ... could not be resolved`, `preset: '<name>' already resolved by '<parent>'s own
+     lock at <path>`), `--porcelain` emits one machine-parseable `DECISION ...` line per stdout
+     for every entry needing a human decision, so an agent doesn't have to scrape the stderr
+     prose to find them:
+     - `DECISION name=<name> repo=<repo> parent=<parent> kind=unresolved required=<true|false>`
+     - `DECISION name=<name> repo=<repo> parent=<parent> kind=preset preset_path=<path>`
+  2. For every `kind=preset` line, ask the human whether to accept the discovered path or
+     override it — present the discovered path as the default, same as the script's own
+     interactive prompt would.
+  3. For every `kind=unresolved` line, ask the human for a path (or whether to clone it), as
      already established.
   4. Re-invoke the script for real with `--set name=path` for **every** entry from both steps —
      whether the human accepted the default or overrode it — plus `--yes` for any clone offers
      they approved and `--no-clone` otherwise. Everything the human already decided on arrives as
      an explicit `--set`; nothing is left for the script's own non-interactive auto-accept
-     fallback to silently decide.
+     fallback to silently decide. Also add `--require-decisions` (`.ps1 -RequireDecisions`) to
+     this real run: if a new optional dependency appeared between the `--check` pass and now (or
+     a decision was simply missed), the mutating command fails loudly instead of exiting `0` with
+     a `warning: ... skipping` an agent could mistake for a clean finish.
 
 ## Agent-doc fallback chain
 

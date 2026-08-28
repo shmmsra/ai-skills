@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  ai-sdlc-bootstrap multi-repo engine v2.2 (Windows).
+  ai-sdlc-bootstrap multi-repo engine v2.3 (Windows).
   Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
   (gitignored, fully resolved — the source of truth agents should read).
   See scripts/update-project-lock.sh for macOS/Linux. Full design:
@@ -26,6 +26,17 @@
   Not applicable to in-repo entries (their path is always relative to a
   known checkout).
 
+.PARAMETER Porcelain
+  Combine with -Check: also emit one "DECISION ..." line per entry needing
+  a human decision, on stdout (machine-parseable, in addition to the
+  existing stderr text). Requires -Check.
+
+.PARAMETER RequireDecisions
+  Combine with a real (mutating) run: fail non-zero if any optional
+  dependency would be silently skipped instead of resolved — use after
+  every decision has been supplied via -Set, as a safety net against a
+  decision surfacing after -Check was last run.
+
 .NOTES
   Non-interactive (agent) usage: never invoke this and expect it to prompt —
   there is no interactive host in a tool-call shell. Ask the human for any
@@ -37,6 +48,8 @@ param(
     [switch]$Check,
     [switch]$Yes,
     [switch]$NoClone,
+    [switch]$Porcelain,
+    [switch]$RequireDecisions,
     [string[]]$Set = @()
 )
 
@@ -58,6 +71,11 @@ function Write-ErrLine {
 # agent's shell tool call — the exact case we must never block in.
 function Test-InteractiveConsole {
     -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected
+}
+
+if ($Porcelain -and -not $Check) {
+    Write-ErrLine "error: -Porcelain requires -Check"
+    exit 64
 }
 
 function Get-RepoRoot {
@@ -263,6 +281,7 @@ $VisitedState = @{}
 $CycleChain = New-Object System.Collections.Generic.List[string]
 $LockEntries = New-Object System.Collections.Generic.List[hashtable]
 $FailedRequired = $false
+$DecisionsNeeded = 0
 
 # Resolve-Node -Name -Repo -Path -Notes -Required -Parent -Depth -BaseDir
 #
@@ -344,6 +363,9 @@ function Resolve-Node {
 
                 if ($Check) {
                     Write-ErrLine "preset: '$sName' already resolved by '$Name's own lock at $sLocalPath"
+                    if ($Porcelain) {
+                        Write-Host "DECISION name=$sName repo=$(Get-Field $seed 'repo') parent=$Name kind=preset preset_path=$sLocalPath"
+                    }
                     $PresetPaths[$sName] = $sLocalPath
                 } elseif (Test-InteractiveConsole) {
                     $pAns = Read-Host "Found '$sName' already resolved by '$Name's own lock at '$sLocalPath' — use it? [Y/n, or type a different path]"
@@ -379,9 +401,16 @@ function Resolve-Node {
         }
     } elseif ($Required -eq 'true') {
         Write-ErrLine "error: required project '$Name' ($Repo) could not be resolved"
+        if ($Porcelain) {
+            Write-Host "DECISION name=$Name repo=$Repo parent=$Parent kind=unresolved required=true"
+        }
         $script:FailedRequired = $true
     } else {
         Write-ErrLine "warning: optional project '$Name' ($Repo) not resolved — skipping"
+        if ($Porcelain) {
+            Write-Host "DECISION name=$Name repo=$Repo parent=$Parent kind=unresolved required=false"
+        }
+        $script:DecisionsNeeded++
     }
 
     $VisitedState[$key] = 'done'
@@ -397,6 +426,11 @@ foreach ($rec in (Parse-ProjectList -Path $Manifest)) {
 }
 
 if ($FailedRequired) { exit 1 }
+
+if ($RequireDecisions -and $DecisionsNeeded -gt 0) {
+    Write-ErrLine "error: $DecisionsNeeded project(s) need a human decision before this can complete — run -Check first"
+    exit 1
+}
 
 # ─── -Check: report only, never write ────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ai-sdlc-bootstrap multi-repo engine v2.2
+# ai-sdlc-bootstrap multi-repo engine v2.3
 #
 # Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
 # (gitignored, fully resolved — the source of truth agents should read).
@@ -23,6 +23,16 @@
 #   --no-clone         Never offer/perform a clone; list what's missing instead.
 #   --check            Verify only — no prompting, no mutation. Exit non-zero if
 #                      anything required is unresolved or missing on disk.
+#   --porcelain        Combine with --check: also emit one `DECISION ...` line
+#                      per entry needing a human decision, on stdout (machine-
+#                      parseable, in addition to the existing stderr text).
+#                      Requires --check.
+#   --require-decisions
+#                      Combine with a real (mutating) run: fail non-zero if any
+#                      optional dependency would be silently skipped instead of
+#                      resolved — use after every decision has been supplied
+#                      via --set, as a safety net against a decision surfacing
+#                      after --check was last run.
 #   -h, --help         Show this help.
 #
 # Non-interactive (agent) usage: never invoke this bare and expect it to prompt —
@@ -43,11 +53,14 @@ set -eo pipefail
 CHECK_ONLY=0
 AUTO_YES=0
 NO_CLONE=0
+PORCELAIN=0
+REQUIRE_DECISIONS=0
+DECISIONS_NEEDED=0
 PRESET_NAMES=()
 PRESET_VALUES=()
 
 usage() {
-  sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,41p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -61,10 +74,17 @@ while [ $# -gt 0 ]; do
     --yes|-y) AUTO_YES=1; shift ;;
     --no-clone) NO_CLONE=1; shift ;;
     --check) CHECK_ONLY=1; shift ;;
+    --porcelain) PORCELAIN=1; shift ;;
+    --require-decisions) REQUIRE_DECISIONS=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "error: unknown argument '$1'" >&2; usage; exit 64 ;;
   esac
 done
+
+if [ "${PORCELAIN}" -eq 1 ] && [ "${CHECK_ONLY}" -eq 0 ]; then
+  echo "error: --porcelain requires --check" >&2
+  exit 64
+fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -z "${REPO_ROOT}" ]; then
@@ -435,6 +455,9 @@ resolve_node() {
 
         if [ "${CHECK_ONLY}" -eq 1 ]; then
           echo "preset: '${s_name}' already resolved by '${name}'s own lock at ${s_localpath}" >&2
+          if [ "${PORCELAIN}" -eq 1 ]; then
+            echo "DECISION name=${s_name} repo=${s_repo} parent=${name} kind=preset preset_path=${s_localpath}"
+          fi
           map_set "${s_name}" "${s_localpath}" PRESET_NAMES PRESET_VALUES
         elif [ -t 0 ] && [ -t 1 ]; then
           local p_ans=""
@@ -470,9 +493,16 @@ resolve_node() {
     fi
   elif [ "${required}" = "true" ]; then
     echo "error: required project '${name}' (${repo}) could not be resolved" >&2
+    if [ "${PORCELAIN}" -eq 1 ]; then
+      echo "DECISION name=${name} repo=${repo} parent=${parent} kind=unresolved required=true"
+    fi
     FAILED=1
   else
     echo "warning: optional project '${name}' (${repo}) not resolved — skipping" >&2
+    if [ "${PORCELAIN}" -eq 1 ]; then
+      echo "DECISION name=${name} repo=${repo} parent=${parent} kind=unresolved required=false"
+    fi
+    DECISIONS_NEEDED=$((DECISIONS_NEEDED + 1))
   fi
 
   map_set "${key}" "done" NODE_KEYS NODE_STATES
@@ -485,6 +515,11 @@ while IFS=$'\x1f' read -r -d $'\x1e' name path repo notes required local_path pa
 done < <(parse_project_list "${MANIFEST}")
 
 if [ "${FAILED}" -eq 1 ]; then
+  exit 1
+fi
+
+if [ "${REQUIRE_DECISIONS}" -eq 1 ] && [ "${DECISIONS_NEEDED}" -gt 0 ]; then
+  echo "error: ${DECISIONS_NEEDED} project(s) need a human decision before this can complete — run --check first" >&2
   exit 1
 fi
 
