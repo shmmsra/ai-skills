@@ -102,6 +102,6 @@ These files are project artefacts, not metadata. **Keep them current.** Updating
 | `.vscode/`, `.zed/`, IDE configs | New recommended extension or workspace setting |
 | `docs/dev-setup.md` | **New dependency, MCP, skill, language toolchain, or required tool** — onboarding will break otherwise |
 | `docs/decisions/` | Architectural choice another agent might wonder about |
-| `project.deps.yaml` | Adding, removing, or renaming a related project. Run `make update-project-lock` after editing. |
+| `project.deps.yaml` | Adding, removing, or renaming a related project. Run `scripts/update-project-lock.sh`/`.ps1` (or `make update-project-lock` if applicable) after editing. |
 
 See `CONTRIBUTING.md §12` for the full policy.
