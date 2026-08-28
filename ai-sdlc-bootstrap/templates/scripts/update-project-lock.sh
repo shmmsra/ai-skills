@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ai-sdlc-bootstrap multi-repo engine v2.1
+# ai-sdlc-bootstrap multi-repo engine v2.2
 #
 # Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
 # (gitignored, fully resolved — the source of truth agents should read).
@@ -121,20 +121,35 @@ map_set() {
 
 # ─── restricted-YAML parser ────────────────────────────────────────────────
 #
-# Emits one line per record under `projects:`, fields joined by \x1f, in the
-# fixed order: name path repo notes required local_path parent depth.
-# Handles both the manifest (name/path/repo/notes/required) and the lock file
-# (name/kind/path/repo/local_path/notes/parent/depth) — unknown/absent fields
-# stay empty.
+# Emits one \x1e-terminated record per entry under `projects:`, fields joined
+# by \x1f, in the fixed order: name path repo notes required local_path
+# parent depth kind. Handles both the manifest (name/path/repo/notes/required)
+# and the lock file (name/kind/path/repo/local_path/notes/parent/depth) —
+# unknown/absent fields stay empty. \x1e (not \n) terminates each record
+# because a field's value — notes, once multi-line — may itself contain real
+# newlines.
+#
+# Supports YAML's literal block scalar (`key: |`) for any field, most useful
+# for multi-line `notes`: content lines must be indented >= 6 spaces (more
+# than the normal 4-space continuation-field indent, regardless of whether
+# the field appeared on the list-item's own line or a continuation line);
+# blank lines are part of the block; the block ends at the first non-blank
+# line indented less than that. Folded scalars (`>`) are not supported.
 
 parse_project_list() {
   local file="$1"
   local in_list=0 have_record=0
   local f_name="" f_path="" f_repo="" f_notes="" f_required="true" f_local_path="" f_parent="" f_depth="" f_kind=""
+  local in_block=0 block_key="" block_strip=-1
+  local -a block_lines=()
 
+  # Records are terminated with \x1e (not \n): a field's value — notes, once
+  # multi-line — may itself contain real newlines, so \n can't double as the
+  # record separator without splitting one record into several wherever a
+  # value happens to wrap. Every consumer reads with `read -d $'\x1e'`.
   emit_record() {
     if [ "${have_record}" -eq 1 ]; then
-      printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\n' \
+      printf '%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1e' \
         "${f_name}" "${f_path}" "${f_repo}" "${f_notes}" "${f_required}" \
         "${f_local_path}" "${f_parent}" "${f_depth}" "${f_kind}"
     fi
@@ -156,28 +171,81 @@ parse_project_list() {
     esac
   }
 
+  # Finalizes an in-progress block scalar into its field (YAML "clip"
+  # chomping — trailing blank lines are dropped), then clears block state.
+  finish_block() {
+    [ "${in_block}" -eq 1 ] || return 0
+    local n=${#block_lines[@]}
+    while [ "${n}" -gt 0 ] && [ -z "${block_lines[$((n - 1))]}" ]; do
+      n=$((n - 1))
+    done
+    local joined="" i
+    for ((i = 0; i < n; i++)); do
+      if [ "${i}" -eq 0 ]; then
+        joined="${block_lines[$i]}"
+      else
+        joined="${joined}"$'\n'"${block_lines[$i]}"
+      fi
+    done
+    set_field "${block_key}" "${joined}"
+    in_block=0
+    block_key=""
+    block_strip=-1
+    block_lines=()
+  }
+
   while IFS= read -r line || [ -n "${line}" ]; do
     line="${line%$'\r'}"
+
+    if [ "${in_block}" -eq 1 ]; then
+      if [ -z "${line}" ]; then
+        block_lines+=("")
+        continue
+      fi
+      local leading=0
+      [[ "${line}" =~ ^([[:space:]]*) ]] && leading=${#BASH_REMATCH[1]}
+      if [ "${leading}" -ge 6 ]; then
+        [ "${block_strip}" -lt 0 ] && block_strip="${leading}"
+        local strip_n="${block_strip}"
+        [ "${leading}" -lt "${strip_n}" ] && strip_n="${leading}"
+        block_lines+=("${line:${strip_n}}")
+        continue
+      fi
+      finish_block
+      # not part of the block — fall through and reprocess this line below
+    fi
+
     if [[ "${line}" =~ ^projects:[[:space:]]*$ ]]; then
       in_list=1
       continue
     fi
     [ "${in_list}" -eq 0 ] && continue
     if [[ "${line}" =~ ^[[:space:]]{2}-[[:space:]]+([a-zA-Z_]+):[[:space:]]*(.*)$ ]]; then
+      local rec_key="${BASH_REMATCH[1]}" rec_val="${BASH_REMATCH[2]}"
       emit_record
       f_name="" f_path="" f_repo="" f_notes="" f_required="true" f_local_path="" f_parent="" f_depth="" f_kind=""
       have_record=1
-      set_field "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+      if [[ "${rec_val}" =~ ^\|[+-]?[0-9]*[[:space:]]*$ ]]; then
+        in_block=1; block_key="${rec_key}"; block_strip=-1; block_lines=()
+      else
+        set_field "${rec_key}" "${rec_val}"
+      fi
       continue
     fi
     if [[ "${line}" =~ ^[[:space:]]{4,}([a-zA-Z_]+):[[:space:]]*(.*)$ ]]; then
-      set_field "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+      local cont_key="${BASH_REMATCH[1]}" cont_val="${BASH_REMATCH[2]}"
+      if [[ "${cont_val}" =~ ^\|[+-]?[0-9]*[[:space:]]*$ ]]; then
+        in_block=1; block_key="${cont_key}"; block_strip=-1; block_lines=()
+      else
+        set_field "${cont_key}" "${cont_val}"
+      fi
       continue
     fi
     if [[ "${line}" =~ ^[^[:space:]] ]]; then
       in_list=0
     fi
   done < "${file}"
+  finish_block
   emit_record
 }
 
@@ -188,7 +256,7 @@ ROOT_NAME="$(sed -nE 's/^name:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/p' "${MANI
 EXISTING_NAMES=()
 EXISTING_PATHS=()
 if [ -f "${LOCK_FILE}" ]; then
-  while IFS=$'\x1f' read -r name path repo notes required local_path parent depth kind; do
+  while IFS=$'\x1f' read -r -d $'\x1e' name path repo notes required local_path parent depth kind; do
     if [ -n "${name}" ]; then
       EXISTING_NAMES+=("${name}")
       EXISTING_PATHS+=("${local_path}")
@@ -358,7 +426,7 @@ resolve_node() {
     # outranks this and is never overwritten.
     local child_lock="${node_dir}/.project.lock.yaml"
     if [ -f "${child_lock}" ]; then
-      while IFS=$'\x1f' read -r s_name s_path s_repo s_notes s_required s_localpath s_parent s_depth s_kind; do
+      while IFS=$'\x1f' read -r -d $'\x1e' s_name s_path s_repo s_notes s_required s_localpath s_parent s_depth s_kind; do
         [ -z "${s_name}" ] && continue
         [ "${s_kind}" != "external" ] && continue
         map_get "${s_name}" PRESET_NAMES PRESET_VALUES >/dev/null && continue
@@ -395,7 +463,7 @@ resolve_node() {
 
     local child_manifest="${node_dir}/project.deps.yaml"
     if [ -f "${child_manifest}" ]; then
-      while IFS=$'\x1f' read -r c_name c_path c_repo c_notes c_required c_lp c_par c_dep c_kind; do
+      while IFS=$'\x1f' read -r -d $'\x1e' c_name c_path c_repo c_notes c_required c_lp c_par c_dep c_kind; do
         [ -z "${c_name}" ] && continue
         resolve_node "${c_name}" "${c_repo}" "${c_path}" "${c_notes}" "${c_required}" "${name}" "$((depth + 1))" "${node_dir}"
       done < <(parse_project_list "${child_manifest}")
@@ -411,7 +479,7 @@ resolve_node() {
   unset "CYCLE_CHAIN[$((${#CYCLE_CHAIN[@]} - 1))]"
 }
 
-while IFS=$'\x1f' read -r name path repo notes required local_path parent depth kind; do
+while IFS=$'\x1f' read -r -d $'\x1e' name path repo notes required local_path parent depth kind; do
   [ -z "${name}" ] && continue
   resolve_node "${name}" "${repo}" "${path}" "${notes}" "${required}" "root" 1 "${REPO_ROOT}"
 done < <(parse_project_list "${MANIFEST}")
@@ -440,6 +508,23 @@ if [ "${CHECK_ONLY}" -eq 1 ]; then
 fi
 
 # ─── write the lock file ────────────────────────────────────────────────────
+#
+# write_field emits a flat `key: value` line, unless the value contains an
+# embedded newline (e.g. a multi-line `notes`), in which case it emits a
+# literal block scalar (`key: |` + 6-space-indented lines) — the exact
+# counterpart to parse_project_list's block-scalar reader, so a multi-line
+# value carried through from project.deps.yaml round-trips correctly.
+write_field() {
+  local key="$1" val="$2"
+  if [[ "${val}" == *$'\n'* ]]; then
+    printf '    %s: |\n' "${key}"
+    while IFS= read -r vline || [ -n "${vline}" ]; do
+      printf '      %s\n' "${vline}"
+    done <<< "${val}"
+  else
+    printf '    %s: %s\n' "${key}" "${val}"
+  fi
+}
 
 {
   printf 'resolved_at: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -448,13 +533,13 @@ fi
   i=0
   for key in "${LOCK_KEYS[@]:-}"; do
     printf '  - name: %s\n' "${LOCK_NAMES[$i]}"
-    printf '    kind: %s\n' "${LOCK_KINDS[$i]}"
-    printf '    repo: %s\n' "${LOCK_REPOS[$i]}"
-    printf '    path: %s\n' "${LOCK_PATHS[$i]}"
-    printf '    local_path: %s\n' "${LOCK_LOCALPATHS[$i]}"
-    printf '    notes: %s\n' "${LOCK_NOTES[$i]}"
-    printf '    parent: %s\n' "${LOCK_PARENTS[$i]}"
-    printf '    depth: %s\n' "${LOCK_DEPTHS[$i]}"
+    write_field kind "${LOCK_KINDS[$i]}"
+    write_field repo "${LOCK_REPOS[$i]}"
+    write_field path "${LOCK_PATHS[$i]}"
+    write_field local_path "${LOCK_LOCALPATHS[$i]}"
+    write_field notes "${LOCK_NOTES[$i]}"
+    write_field parent "${LOCK_PARENTS[$i]}"
+    write_field depth "${LOCK_DEPTHS[$i]}"
     i=$((i + 1))
   done
 } > "${LOCK_FILE}"

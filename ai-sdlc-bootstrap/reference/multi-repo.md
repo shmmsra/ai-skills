@@ -69,11 +69,40 @@ PowerShell) can read it reliably:
 
 - Exactly one list (`projects:`) with entries at 2-space indent (`  - key: value`).
 - Continuation fields at 4-space indent (`    key: value`).
-- Flat scalars only — no nested lists, no multi-line strings, no anchors/aliases.
+- Flat scalars, or literal block scalars (`key: |` — see below) for multi-line values. No
+  nested lists, no folded scalars (`>`), no anchors/aliases.
 - A line with no leading whitespace ends the list.
 
 Don't hand-author anything outside this shape — a real YAML parser would accept it, our
 scripts won't.
+
+#### Multi-line values (`key: |`)
+
+Any field — most usefully `notes` — can span multiple lines using YAML's literal block scalar:
+
+```yaml
+  - name: pricing-engine
+    path: packages/pricing-engine
+    notes: |
+      Owns checkout pricing (aka 'PE'). Has its own AGENTS.md.
+
+      Second paragraph after a blank line — blank lines are part of the block.
+        This line is indented one level further and keeps that extra indent.
+    required: true
+```
+
+Rules: content lines must be indented **at least 6 spaces** — more than the normal 4-space
+continuation-field indent — regardless of whether `key: |` appeared on the list-item's own line
+(2-space indent) or a continuation line (4-space indent); this is a fixed convention, not
+YAML's usual auto-detect-from-first-line indentation rule, kept simple on purpose. Blank lines
+are part of the block. The block ends at the first non-blank line indented less than that (a
+new field, a new list item, or a dedent out of the list). Trailing blank lines are dropped
+(YAML's default "clip" chomping). Any indentation beyond the 6-space minimum is preserved
+literally in the value. **Folded scalars (`>`) are not supported** — only literal (`|`).
+
+This round-trips through `.project.lock.yaml`: the writer detects a value containing an
+embedded newline and emits it back out as a block scalar, so a multi-line `notes` written in
+`project.deps.yaml` survives being carried into the lock and re-read on a later run.
 
 ## Lock file
 

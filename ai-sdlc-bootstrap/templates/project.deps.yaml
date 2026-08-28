@@ -14,11 +14,14 @@
 #
 # `notes` is free text: what this project holds, any acronyms, and when an
 # agent working here should read its agent docs before proceeding. This is
-# the field that makes the whole feature useful — don't leave it blank.
+# the field that makes the whole feature useful — don't leave it blank. It
+# can span multiple lines using `notes: |` (see the block-scalar example
+# below) if a one-liner isn't enough.
 #
 # Restricted YAML: exactly one list (`projects:`), 2-space-indented `- key:`
-# entries, 4-space-indented continuation fields, flat scalars only. See
-# reference/multi-repo.md in the ai-sdlc-bootstrap skill for why.
+# entries, 4-space-indented continuation fields, flat scalars or `key: |`
+# multi-line blocks (content indented >= 6 spaces; folded `>` blocks are not
+# supported). See reference/multi-repo.md in the ai-sdlc-bootstrap skill for why.
 #
 # After editing this file, run `make update-project-lock`
 # (or scripts/update-project-lock.ps1 directly on Windows) to refresh the lock.
@@ -33,5 +36,9 @@ projects:
   # - name: widgets-core
   #   repo: git@github.com:acme/widgets-core.git
   #   path: packages/core
-  #   notes: "Upstream rules feed for the pricing engine."
+  #   notes: |
+  #     Upstream rules feed for the pricing engine (aka 'WC').
+  #
+  #     Check this before changing anything in the pricing rule evaluator —
+  #     WC owns the schema the evaluator consumes.
   #   required: true
