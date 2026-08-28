@@ -54,6 +54,7 @@
 - **Check `.project.lock.yaml` before starting any non-trivial task**, not only once you already suspect it's relevant — its `notes` field on each entry is the only way to learn a related project exists and might overlap with what you're doing, since nothing is summarized elsewhere on purpose.
 - Before making a change that touches a related project's domain (see `docs/agents/OVERVIEW.md` § Related projects), read that project's own agent docs first — don't assume behavior you haven't verified.
 - **Never copy specific entries** (names, repos, paths, notes) from `project.deps.yaml` or `.project.lock.yaml` into this file, `OVERVIEW.md`, `CONTRIBUTING.md`, or any other doc — reference those files generically only. A sentence like "X's entries are Y, Z, addressing paths under W" duplicates data that drifts out of date the moment an entry changes, which is exactly what these two files exist to prevent.
+- **A non-interactive real run of `update-project-lock.{sh,ps1}` now fails by default** if any dependency would fall through to a silent skip or auto-accept — this is not an agent-side responsibility to enforce, the script does it. Don't reach for `--allow-silent-skip`/`-AllowSilentSkip` to force a failing run to pass without first surfacing what it caught to the human; see `CONTRIBUTING.md §14`.
 
 ---
 
