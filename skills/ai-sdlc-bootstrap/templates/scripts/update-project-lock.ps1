@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  ai-sdlc-bootstrap multi-repo engine v2.1 (Windows).
+  ai-sdlc-bootstrap multi-repo engine v2.2 (Windows).
   Resolves project.deps.yaml (raw, hand-authored) into .project.lock.yaml
   (gitignored, fully resolved — the source of truth agents should read).
   See scripts/update-project-lock.sh for macOS/Linux. Full design:
@@ -90,30 +90,95 @@ foreach ($item in $Set) {
 # and the lock file (name/kind/path/repo/local_path/notes/parent/depth) —
 # records simply carry whichever keys were present; absent keys read back as
 # $null via Get-Field's default.
+#
+# Supports YAML's literal block scalar (`key: |`) for any field, most useful
+# for multi-line `notes`: content lines must be indented >= 6 spaces (more
+# than the normal 4-space continuation-field indent, regardless of whether
+# the field appeared on the list-item's own line or a continuation line);
+# blank lines are part of the block; the block ends at the first non-blank
+# line indented less than that. Folded scalars (`>`) are not supported.
+#
+# Unlike the bash engine, no record-separator plumbing is needed here — this
+# returns real in-memory hashtables, not text serialized through a stream
+# that a separate reader has to re-split, so an embedded newline in a value
+# can't be confused with a record boundary.
+
+function Read-BlockScalar {
+    param([string[]]$Lines, [int]$StartIndex)
+
+    $content = New-Object System.Collections.Generic.List[string]
+    $stripWidth = -1
+    $idx = $StartIndex
+
+    while ($idx -lt $Lines.Count) {
+        $raw = $Lines[$idx].TrimEnd("`r")
+        if ($raw -eq '') {
+            $content.Add('')
+            $idx++
+            continue
+        }
+        $leading = 0
+        if ($raw -match '^(\s*)') { $leading = $Matches[1].Length }
+        if ($leading -ge 6) {
+            if ($stripWidth -lt 0) { $stripWidth = $leading }
+            $strip = [Math]::Min($stripWidth, $leading)
+            $content.Add($raw.Substring($strip))
+            $idx++
+            continue
+        }
+        break
+    }
+
+    # YAML "clip" chomping: drop trailing blank lines.
+    while ($content.Count -gt 0 -and $content[$content.Count - 1] -eq '') {
+        $content.RemoveAt($content.Count - 1)
+    }
+
+    return @{ Value = [string]::Join("`n", $content); NextIndex = $idx }
+}
 
 function Parse-ProjectList {
     param([string]$Path)
 
-    $lines = Get-Content -LiteralPath $Path
+    $lines = @(Get-Content -LiteralPath $Path)
     $inList = $false
     $records = New-Object System.Collections.Generic.List[hashtable]
     $current = $null
+    $idx = 0
 
-    foreach ($raw in $lines) {
-        $line = $raw.TrimEnd("`r")
-        if ($line -match '^projects:\s*$') { $inList = $true; continue }
-        if (-not $inList) { continue }
-        if ($line -match '^\s{2}-\s+([a-zA-Z_]+):\s*(.*)$') {
-            if ($current) { $records.Add($current) }
-            $current = @{}
-            $current[$Matches[1]] = $Matches[2].Trim('"')
+    while ($idx -lt $lines.Count) {
+        $line = $lines[$idx].TrimEnd("`r")
+
+        if ($line -match '^projects:\s*$') { $inList = $true; $idx++; continue }
+        if (-not $inList) { $idx++; continue }
+
+        $recordStart = $line -match '^\s{2}-\s+([a-zA-Z_]+):\s*(.*)$'
+        $continuation = -not $recordStart -and $line -match '^\s{4,}([a-zA-Z_]+):\s*(.*)$'
+
+        if ($recordStart -or $continuation) {
+            $key = $Matches[1]
+            $val = $Matches[2]
+
+            if ($recordStart) {
+                if ($current) { $records.Add($current) }
+                $current = @{}
+            }
+
+            if ($val -match '^\|[+-]?\d*\s*$') {
+                $idx++
+                $block = Read-BlockScalar -Lines $lines -StartIndex $idx
+                if ($current) { $current[$key] = $block.Value }
+                $idx = $block.NextIndex
+                continue
+            }
+
+            if ($current) { $current[$key] = $val.Trim('"') }
+            $idx++
             continue
         }
-        if ($line -match '^\s{4,}([a-zA-Z_]+):\s*(.*)$') {
-            if ($current) { $current[$Matches[1]] = $Matches[2].Trim('"') }
-            continue
-        }
+
         if ($line -match '^\S') { $inList = $false }
+        $idx++
     }
     if ($current) { $records.Add($current) }
     return $records
@@ -346,6 +411,23 @@ if ($Check) {
 }
 
 # ─── write the lock file ─────────────────────────────────────────────────────
+#
+# Write-Field emits a flat `key: value` line, unless the value contains an
+# embedded newline (e.g. a multi-line `notes`), in which case it emits a
+# literal block scalar (`key: |` + 6-space-indented lines) — the exact
+# counterpart to Read-BlockScalar, so a multi-line value carried through from
+# project.deps.yaml round-trips correctly.
+function Write-Field {
+    param([System.Collections.Generic.List[string]]$Lines, [string]$Key, [string]$Value)
+    if ($Value -match "`n") {
+        $Lines.Add("    ${Key}: |")
+        foreach ($vline in ($Value -split "`n")) {
+            $Lines.Add("      $vline")
+        }
+    } else {
+        $Lines.Add("    ${Key}: $Value")
+    }
+}
 
 $lines = New-Object System.Collections.Generic.List[string]
 $lines.Add("resolved_at: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))")
@@ -353,13 +435,13 @@ $lines.Add("root: $RootName")
 $lines.Add('projects:')
 foreach ($e in $LockEntries) {
     $lines.Add("  - name: $($e.name)")
-    $lines.Add("    kind: $($e.kind)")
-    $lines.Add("    repo: $($e.repo)")
-    $lines.Add("    path: $($e.path)")
-    $lines.Add("    local_path: $($e.local_path)")
-    $lines.Add("    notes: $($e.notes)")
-    $lines.Add("    parent: $($e.parent)")
-    $lines.Add("    depth: $($e.depth)")
+    Write-Field -Lines $lines -Key 'kind' -Value $e.kind
+    Write-Field -Lines $lines -Key 'repo' -Value $e.repo
+    Write-Field -Lines $lines -Key 'path' -Value $e.path
+    Write-Field -Lines $lines -Key 'local_path' -Value $e.local_path
+    Write-Field -Lines $lines -Key 'notes' -Value $e.notes
+    Write-Field -Lines $lines -Key 'parent' -Value $e.parent
+    Write-Field -Lines $lines -Key 'depth' -Value $e.depth
 }
 Set-Content -LiteralPath $LockFile -Value $lines
 Write-Host "wrote $LockFile"
