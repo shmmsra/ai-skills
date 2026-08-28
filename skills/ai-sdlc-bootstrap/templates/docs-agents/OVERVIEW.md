@@ -37,6 +37,10 @@ a related project's own further dependencies are walked too), each with its `kin
 guaranteed current on its own; if `.project.lock.yaml` is missing or looks stale relative to it,
 run `make update-project-lock` (or `scripts/update-project-lock.ps1` on Windows) first.
 
+**Never summarize the specific current entries here** (e.g. "this repo's related projects are X, Y, Z, addressing paths under W") — reference these two files generically only. That duplicates data that goes stale the instant an entry changes.
+
+**Read `.project.lock.yaml` before starting any task, not only once you already suspect it's relevant** — its `notes` field on each entry is the *only* way to learn a related project exists and might overlap with what you're doing, precisely because nothing is summarized here. Skipping this means you can silently miss a relevant related project.
+
 **Before working on anything that touches a related project's domain** (per its `notes` in the
 lock), read that project's own agent docs first — even if your tool doesn't auto-load them. Use
 `<local_path>` directly, **except** for an external entry whose lock record has a non-empty

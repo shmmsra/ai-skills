@@ -298,6 +298,10 @@ This project declares relationships with other projects — either sub-projects 
 - **`project.deps.yaml`** (committed) — the raw input you hand-edit. In-repo entries (no `repo:` field) just declare a path inside this checkout; external entries (`repo:` field present) declare a git remote to depend on.
 - **`.project.lock.yaml`** (gitignored — never committed, it's device-specific) — **the source of truth agents should read**. Every related project, in-repo or external, fully resolved and flattened, including transitive ones (a related project's own further dependencies are walked too, recursively, regardless of whether a given hop is in-repo or external). Each entry carries its `kind`, resolved `local_path`, and its `notes`.
 
+**Never summarize the specific current entries here** (e.g. "X's entries are A, B, C, addressing paths under Y") — reference these two files generically only. That kind of sentence duplicates data that goes stale the instant an entry is added, removed, or changed, defeating the reason this is split into a committed manifest and a generated lock in the first place.
+
+**Read `.project.lock.yaml` before starting any task, not only once you already suspect it's relevant** — its `notes` field on each entry is the *only* way to learn a related project exists and might overlap with what you're doing, precisely because nothing is summarized here.
+
 ### Keeping the lock current
 
 After adding, removing, or editing an entry in `project.deps.yaml`, run:
