@@ -328,4 +328,49 @@ curl -fsSL https://raw.githubusercontent.com/shmmsra/vocal-ai/main/scripts/insta
 
 ---
 
+## Copilot native skill install (AISKL-007)
+
+### Scenario A — project scope + legacy block migration
+
+**Test command(s)**:
+```bash
+# In a clean git repo containing a legacy block:
+mkdir -p .github && printf '# mine\n\n<!-- skill:ai-sdlc-bootstrap -->\nold\n<!-- /skill:ai-sdlc-bootstrap -->\n' > .github/copilot-instructions.md
+bash /path/to/ai-skills/scripts/install.sh
+# select: ai-sdlc-bootstrap, scope 1 (project), agent 3 (GitHub Copilot)
+copilot   # then type /skills or /ai-sdlc-bootstrap
+```
+
+**Setup**: Copilot CLI installed and authenticated.
+
+**What to observe**: Installer prints `removed legacy ai-sdlc-bootstrap block` and `Copilot → .github/skills/ai-sdlc-bootstrap/`.
+
+**Pass criteria**:
+- `.github/skills/ai-sdlc-bootstrap/` contains `SKILL.md`, `VERSION`, `reference/`, `templates/`
+- `.github/copilot-instructions.md` still contains `# mine` but no `skill:ai-sdlc-bootstrap` markers
+- `.gitattributes` has `.github/skills/ai-sdlc-bootstrap/** linguist-vendored`
+- `ai-sdlc-bootstrap` is listed in Copilot CLI's skills
+- Re-running without `--update` prints `already installed — skipping`
+
+**Fail indicators**: Skill missing from Copilot CLI; legacy block still present; user content in `copilot-instructions.md` lost.
+
+---
+
+### Scenario B — user scope
+
+**Test command(s)**:
+```bash
+bash /path/to/ai-skills/scripts/install.sh
+# select: ai-sdlc-bootstrap, scope 2 (user), agent 3 (GitHub Copilot)
+cd /some/other/dir && copilot   # then /skills
+```
+
+**What to observe**: Installer prints `Copilot → ~/.copilot/skills/ai-sdlc-bootstrap/`; no "falls back to project" warning.
+
+**Pass criteria**: `~/.copilot/skills/ai-sdlc-bootstrap/SKILL.md` exists and the skill is available in Copilot CLI from any directory.
+
+**Fail indicators**: Files written to the current project instead; skill not listed in Copilot CLI.
+
+---
+
 *Add new sections below this line as features land. Group by feature area (e.g. install, skill-body, templates).*

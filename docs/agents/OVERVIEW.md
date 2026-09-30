@@ -29,7 +29,7 @@ ai-skills/
     └── install.ps1            ← Windows PowerShell installer
 ```
 
-Consumers pull skills via `git subtree add` into `.claude/skills/` (Claude Code), `.cursor/rules/` (Cursor), `.github/copilot-instructions.md` (Copilot), etc.
+Consumers pull skills via `git subtree add` into `.claude/skills/` (Claude Code), `.cursor/rules/` (Cursor), `.github/skills/` (Copilot), etc.
 
 ---
 

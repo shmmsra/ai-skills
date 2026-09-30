@@ -175,9 +175,9 @@ $ChosenSkills = @($skillIndices | ForEach-Object { $AllSkills[$_] })
 # ── 2. Scope ──────────────────────────────────────────────────────────
 Write-Heading "Install scope"
 Write-Host "  1.  Project  — installs into the current working directory"
-Write-Host "  2.  User     — installs globally (~\.claude, ~\.gemini, ~\.windsurfrules)"
+Write-Host "  2.  User     — installs globally (~\.claude, ~\.copilot, ~\.gemini, ~\.windsurfrules)"
 Write-Host ""
-Write-Dim "Note: user-level is supported by Claude Code, Gemini CLI, and Windsurf."
+Write-Dim "Note: user-level is supported by Claude Code, GitHub Copilot, Gemini CLI, and Windsurf."
 Write-Dim "      Other agents fall back to project-level automatically."
 Write-Host ""
 $scopeInput = Read-Host "  Scope [1/2, default 1]"
@@ -188,7 +188,7 @@ $AgentKeys   = @('claude-code','cursor','copilot','gemini','windsurf','aider')
 $AgentLabels = @(
     'Claude Code     ->  .claude\skills\<name>\'
     'Cursor          ->  .cursor\rules\<name>.mdc'
-    'GitHub Copilot  ->  .github\copilot-instructions.md'
+    'GitHub Copilot  ->  .github\skills\<name>\'
     'Gemini CLI      ->  GEMINI.md'
     'Windsurf        ->  .windsurfrules'
     'Aider           ->  CONVENTIONS.md'
@@ -211,8 +211,9 @@ foreach ($skill in $ChosenSkills) {
             }
             'cursor' { $found = Test-Path ".cursor\rules\$skill.mdc" }
             'copilot' {
-                $f = ".github\copilot-instructions.md"
-                $found = (Test-Path $f) -and ((Get-Content $f -Raw) -match "<!-- skill:$([regex]::Escape($skill)) -->")
+                $d = if ($Scope -eq 'user') { "$HOME\.copilot\skills\$skill" } `
+                     else { ".github\skills\$skill" }
+                $found = Test-Path $d
             }
             'gemini' {
                 $f = if ($Scope -eq 'user') { "$HOME\.gemini\GEMINI.md" } else { "GEMINI.md" }
@@ -308,16 +309,38 @@ function Install-Cursor {
 
 function Install-Copilot {
     param([string]$Skill)
-    if ($Scope -eq 'user') {
-        Write-Warn "    GitHub Copilot: no standard user-level location — installing at project level"
+    $dest = if ($Scope -eq 'user') { "$HOME\.copilot\skills\$Skill" } `
+            else { ".github\skills\$Skill" }
+
+    # Older installer versions inlined the skill into copilot-instructions.md,
+    # which Copilot treats as always-on instructions, not a skill.
+    $legacy = ".github\copilot-instructions.md"
+    if ((Test-Path $legacy) -and ((Get-Content $legacy -Raw) -match "<!-- skill:$([regex]::Escape($Skill)) -->")) {
+        Remove-SkillBlock $legacy $Skill
+        Write-Ok "    removed legacy $Skill block from $legacy"
     }
-    $dest = ".github\copilot-instructions.md"
-    New-Item -ItemType Directory -Path ".github" -Force | Out-Null
-    $body    = Get-SkillBody "$WorkDir\repo\$Skill\SKILL.md"
-    $content = "`n<!-- skill:$Skill -->`n$body`n<!-- /skill:$Skill -->"
-    Invoke-GuardedUpsert $dest $Skill $content
-    $skillVer = if (Test-Path "$WorkDir\repo\$Skill\VERSION") { (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim() } else { "unknown" }
-    Write-Ok "Copilot      ->  $dest  (v$skillVer)"
+
+    if ((Test-Path $dest) -and -not $UpdateMode) {
+        $srcVer  = if (Test-Path "$WorkDir\repo\$Skill\VERSION") {
+                       (Get-Content "$WorkDir\repo\$Skill\VERSION" -Raw).Trim()
+                   } else { "" }
+        $destVer = if (Test-Path "$dest\VERSION") {
+                       (Get-Content "$dest\VERSION" -Raw).Trim()
+                   } else { "" }
+        if ($srcVer -ne "" -and $srcVer -eq $destVer) {
+            Write-Ok "    $Skill v$srcVer already installed — skipping  (use -Update to force)"
+        } else {
+            Write-Warn "    Already present — skipping  (use -Update to overwrite)"
+        }
+        return
+    }
+
+    New-Item -ItemType Directory -Path $dest -Force | Out-Null
+    Copy-Item -Path "$WorkDir\repo\$Skill\*" -Destination $dest -Recurse -Force
+    $skillVer = if (Test-Path "$dest\VERSION") { (Get-Content "$dest\VERSION" -Raw).Trim() } else { "unknown" }
+    Write-Ok "Copilot      ->  $dest\  (v$skillVer)"
+
+    if ($Scope -eq 'project') { Add-GitAttribute ".github/skills/$Skill/** linguist-vendored" }
 }
 
 function Install-Gemini {

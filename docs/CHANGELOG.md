@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-09-30 — AISKL-007: install Copilot skills as native agent skills
+
+**What changed**: `scripts/install.sh` and `scripts/install.ps1` now install the GitHub Copilot target as a full skill directory — `.github/skills/<name>/` (project scope) or `~/.copilot/skills/<name>/` (user scope) — mirroring the Claude Code install (VERSION-aware skip, `--update` overwrite, per-skill `linguist-vendored`). Any legacy `<!-- skill:<name> -->` block the old installer appended to `.github/copilot-instructions.md` is removed on install. Updated agent-menu labels, scope prompt text, README install table, and OVERVIEW.
+
+**Why**: The old installer inlined the SKILL.md body into `.github/copilot-instructions.md`, which Copilot treats as always-on repository instructions — not a skill — so skills never appeared as `/<name>` in Copilot CLI. Supporting files (`reference/`, `templates/`) were also dropped, and user scope silently fell back to project. Copilot CLI discovers skills only in `.github/skills`, `.claude/skills`, `.agents/skills` (project) and `~/.copilot/skills`, `~/.agents/skills` (user); notably it does not read `~/.claude/skills`.
+
+**What was rejected**: installing Copilot user-scope skills into `~/.agents/skills` (shared with other tools, less discoverable as Copilot-specific); symlinking from `~/.claude/skills` (user declined; couples two agents' install state); keeping the `copilot-instructions.md` block alongside the new skill (duplicates the instructions into every prompt).
+
+**What's next**: No follow-up; `skills/**` unchanged, so no `dist` republish needed.
+
+---
+
 ## 2026-08-22 — AISKL-005: add vocal-ai skill
 
 **What changed**: Added `skills/vocal-ai/` (SKILL.md, VERSION, README.md, `reference/setup.md`) — a skill that generates speech from text via the local, offline `vocalai` CLI (Chatterbox TTS over ONNX), for use cases like demo-recording narration. The skill orchestrates the upstream `vocal-ai` repo's own `install.sh`/`install.ps1` for first-time setup and updates rather than duplicating that logic, and defaults the binary/model cache to `~/.vocal-ai` (via `VOCALAI_INSTALL_DIR`) so it's fetched once and reused across projects instead of per-repo.

@@ -42,12 +42,14 @@ The scripts also auto-detect if the target folder is a git repo and add per-skil
 |---|---|---|
 | Claude Code | `.claude/skills/<name>/` | `~/.claude/skills/<name>/` |
 | Cursor | `.cursor/rules/<name>.mdc` | *(falls back to project)* |
-| GitHub Copilot | `.github/copilot-instructions.md` | *(falls back to project)* |
+| GitHub Copilot | `.github/skills/<name>/` | `~/.copilot/skills/<name>/` |
 | Gemini CLI | `GEMINI.md` | `~/.gemini/GEMINI.md` |
 | Windsurf | `.windsurfrules` | `~/.windsurfrules` |
 | Aider | `CONVENTIONS.md` | *(falls back to project)* |
 
-> **Claude Code** gets the full skill directory (SKILL.md + all supporting files). All other agents receive only the skill body, formatted for their instruction-file convention. Supporting files such as `templates/` and `reference/` are Claude Code-specific and are not copied for other agents.
+> **Claude Code** and **GitHub Copilot** get the full skill directory (SKILL.md + all supporting files) as a native agent skill, invokable as `/<name>`. All other agents receive only the skill body, formatted for their instruction-file convention; supporting files such as `templates/` and `reference/` are not copied for them.
+>
+> **Copilot note**: Copilot CLI does *not* read `~/.claude/skills/` — user-level skills must live in `~/.copilot/skills/` (or `~/.agents/skills/`). Older installer versions appended skills to `.github/copilot-instructions.md`; re-running the installer for Copilot removes that legacy block automatically.
 
 ---
 

@@ -23,6 +23,7 @@
 
 - [x] New skill added via the full plan/approve/implement/test workflow (`vocal-ai`, AISKL-005)
 - [ ] Install scripts cover all agent targets reliably
+  - [x] GitHub Copilot installs as a native skill (project + user scope) — AISKL-007
 - [ ] First real ticket landed via the full AISKL-NNN convention
 
 ---

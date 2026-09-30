@@ -172,8 +172,8 @@ for _idx in "${REPLY_INDICES[@]}"; do CHOSEN_SKILLS+=("${ALL_SKILLS[$_idx]}"); d
 # ── 2. Scope ──────────────────────────────────────────────────────────
 heading "Install scope"
 printf "  1.  Project  — installs into the current working directory\n"
-printf "  2.  User     — installs globally (~/.claude, ~/.gemini, ~/.windsurfrules)\n\n"
-dim "  Note: user-level is supported by Claude Code, Gemini CLI, and Windsurf."
+printf "  2.  User     — installs globally (~/.claude, ~/.copilot, ~/.gemini, ~/.windsurfrules)\n\n"
+dim "  Note: user-level is supported by Claude Code, GitHub Copilot, Gemini CLI, and Windsurf."
 dim "        Other agents fall back to project-level automatically."
 printf "\n"
 read -rp "  Scope [1/2, default 1]: " SCOPE_INPUT < /dev/tty
@@ -185,7 +185,7 @@ AGENT_KEYS=(claude-code cursor copilot gemini windsurf aider)
 AGENT_LABELS=(
   "Claude Code     →  .claude/skills/<name>/"
   "Cursor          →  .cursor/rules/<name>.mdc"
-  "GitHub Copilot  →  .github/copilot-instructions.md"
+  "GitHub Copilot  →  .github/skills/<name>/"
   "Gemini CLI      →  GEMINI.md"
   "Windsurf        →  .windsurfrules"
   "Aider           →  CONVENTIONS.md"
@@ -218,7 +218,9 @@ for _skill in "${CHOSEN_SKILLS[@]}"; do
         fi
         ;;
       copilot)
-        if grep -q "<!-- skill:$_skill -->" ".github/copilot-instructions.md" 2>/dev/null; then
+        [ "$SCOPE" = "user" ] && _check_file="$HOME/.copilot/skills/$_skill" \
+                              || _check_file=".github/skills/$_skill"
+        if [ -d "$_check_file" ]; then
           warn "  Existing: $_agent / $_skill"
           EXISTING_FOUND=1
         fi
@@ -320,16 +322,37 @@ install_cursor() {
 }
 
 install_copilot() {
-  local skill="$1"
-  [ "$SCOPE" = "user" ] && warn "    GitHub Copilot: no standard user-level location — installing at project level"
-  local dest=".github/copilot-instructions.md"
-  mkdir -p .github
-  local body; body=$(skill_body "$WORKDIR/repo/$skill/SKILL.md")
-  guarded_upsert "$dest" "$skill" \
-    "$(printf '\n<!-- skill:%s -->\n%s\n<!-- /skill:%s -->' "$skill" "$body" "$skill")"
-  local _rc=$?
-  local skill_ver; skill_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "unknown")
-  [ "$_rc" -eq 0 ] && ok "Copilot      →  $dest  (v${skill_ver})"
+  local skill="$1" dest
+  [ "$SCOPE" = "user" ] && dest="$HOME/.copilot/skills/$skill" \
+                        || dest=".github/skills/$skill"
+
+  # Older installer versions inlined the skill into copilot-instructions.md,
+  # which Copilot treats as always-on instructions, not a skill.
+  local legacy=".github/copilot-instructions.md"
+  if grep -q "<!-- skill:${skill} -->" "$legacy" 2>/dev/null; then
+    remove_skill_block "$legacy" "$skill"
+    ok "    removed legacy $skill block from $legacy"
+  fi
+
+  if [ -d "$dest" ] && [ "$UPDATE_MODE" -eq 0 ]; then
+    local src_ver dest_ver
+    src_ver=$(cat "$WORKDIR/repo/$skill/VERSION" 2>/dev/null || echo "")
+    dest_ver=$(cat "$dest/VERSION" 2>/dev/null || echo "")
+    if [ -n "$src_ver" ] && [ "$src_ver" = "$dest_ver" ]; then
+      ok "    $skill v${src_ver} already installed — skipping  (pass --update to force)"
+    else
+      warn "    Already present — skipping  (use --update to overwrite)"
+    fi
+    return 0
+  fi
+
+  mkdir -p "$dest"
+  cp -r "$WORKDIR/repo/$skill/." "$dest/"
+  local skill_ver; skill_ver=$(cat "$dest/VERSION" 2>/dev/null || echo "unknown")
+  ok "Copilot      →  $dest/  (v${skill_ver})"
+
+  [ "$SCOPE" = "project" ] && add_gitattribute ".github/skills/$skill/** linguist-vendored"
+  return 0
 }
 
 install_gemini() {
