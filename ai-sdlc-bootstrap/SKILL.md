@@ -123,6 +123,7 @@ When approved:
    - If `.gitignore` exists → append only entries not already present (see `reference/language-presets.md`).
    - If an existing agent-config file looks improvable (stale, missing key sections), **you may propose a rewrite** — but only after listing the specific gaps and getting per-file consent in the plan step.
    - If `project.deps.yaml` exists → always rewrite both `scripts/update-project-lock.{sh,ps1}` from the current template (propagates engine fixes) even if the manifest itself doesn't change; show the diff either way. See `reference/multi-repo.md`.
+   - If `docs/agents/OVERVIEW.md` or `docs/agents/CONVENTIONS.md` already exist and you're adding related-projects support: append their "Related projects" / "Related-project awareness" section verbatim from `templates/docs-agents/OVERVIEW.md` / `templates/docs-agents/CONVENTIONS.md` (token-substituted only) — do not compose the section's prose yourself, even if the rest of the file was hand-edited since the original scaffold. Show the diff before writing. See rule 11.
 
 4. After writing, run:
    ```bash
@@ -203,6 +204,7 @@ Templates live in `templates/`. Always read the template right before writing th
 8. **The commit-tracking system is opt-in.** If the user picks `convention-only` in Q10, do *not* install the post-commit hook or scaffold `docs/commit-log.md`.
 9. **Related-projects support is opt-in.** Never write `project.deps.yaml`, the two lock-resolution scripts, or any of the associated doc sections unless Round 6 was explicitly accepted (or `project.deps.yaml` already existed). Never hand-write `.project.lock.yaml` — only the script writes it, even the first time.
 10. **Never summarize the Round 6 answers into `CONTRIBUTING.md` §14, `OVERVIEW.md`, or any other doc.** A sentence like "this repo's related projects are X, Y, Z, addressing paths under W" duplicates data that lives in `project.deps.yaml`/`.project.lock.yaml` and goes stale the moment an entry changes — exactly the drift the manifest/lock split exists to prevent. Reference those files generically; don't restate their contents.
+11. **The three related-projects docs have non-overlapping scopes — don't blur them.** `OVERVIEW.md` § Related projects is the one place that explains the concept (what the two files are, why the split exists, the fallback doc-lookup order). `CONTRIBUTING.md` §14 is the one place that explains the procedure (how to run/maintain the lock, interactive vs. non-interactive invocation). `CONVENTIONS.md`'s "Related-project awareness" section is a short, fixed bullet list of enforceable constraints that *point to* the other two — it must never grow into its own explanation of the file roles or its own restatement of the invocation steps. If you're about to write more than the template's few bullets into `CONVENTIONS.md` for this feature, stop — that content belongs in `OVERVIEW.md` or `CONTRIBUTING.md` instead, not copied into a third place.
 
 ---
 
